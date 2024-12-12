@@ -2,6 +2,7 @@
 #include<Menu.cpp>
 using namespace std;
 
+//class to handle dynamic arrays. :(
 class DynamicArray
 {
     private:
@@ -52,12 +53,3 @@ class DynamicArray
         }
 
 };
-
-
-
-
-
-int main()
-{
-
-}
