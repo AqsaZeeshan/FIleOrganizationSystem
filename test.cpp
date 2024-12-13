@@ -1,3 +1,7 @@
+//stack undo opperation
+//queue redo or batch processing
+//graphs for dependancies
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -147,19 +151,19 @@ void showMenu(DynamicArray& files) {
         cout << "==========================================" << endl;
         cout << "         File Organization System         " <<endl;
         cout << "==========================================" <<endl;
-        cout << "1. View All Files" <<endl;
-        cout << "2. Add a New File" <<endl;
-        cout << "3. Delete a File" << endl;
-        cout << "4. Move a File to a Different Category" <<endl;
-        cout << "5. Sort Files" << endl;
+        cout << "1. View All Files" <<endl;//done
+        cout << "2. Add a New File" <<endl;//done
+        cout << "3. Delete a File" << endl;// should be done
+        cout << "4. Move a File to a Different Category" <<endl;// should be done
+        cout << "5. Sort Files" << endl;//done
         cout << "     a) By Name" << endl;
         cout << "     b) By Size" << endl;
         cout << "     c) By Creation Date" << endl;
         cout << "     d) By Last Modified Date" << endl;
-        cout << "6. Search Files" <<endl;
+        cout << "6. Search Files" <<endl;// needs to be tweeked
         cout << "     a) By Name" << endl;
         cout << "     b) By File Extension" <<endl;
-        cout << "7. Display Files by Category" << endl;
+        cout << "7. Display Files by Category" << endl; // should be done
         cout << "8. Display File Dependencies (Graph View)" << endl;
         cout << "9. Exit" << endl;
         cout << "==========================================" << endl;
