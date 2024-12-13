@@ -6,6 +6,12 @@
 
 using namespace std;
 
+struct DependencyNode {
+    string dependencyName;  // Name of the dependency
+    DependencyNode* next;   // Pointer to the next node
+
+    DependencyNode(const string& name) : dependencyName(name), next(nullptr) {}
+};
 
 struct File {
     string fileName;
@@ -14,7 +20,10 @@ struct File {
     string category;
     string creationDate;
     string lastModifiedDate;
+    DependencyNode* dependenciesHead;
     vector<string> dependencies; // we can make a list ?
+
+    File() : dependenciesHead(nullptr) {}
 };
 
 // forward declerations
