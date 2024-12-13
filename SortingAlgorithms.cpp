@@ -1,5 +1,6 @@
 #include <iostream>
-#include<Menu.cpp>
+#include "Menu.cpp"
+#include "DataStructures.cpp"
 using namespace std;
 
 // ssorting based on name
