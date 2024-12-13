@@ -5,10 +5,7 @@
 #include<sstream>
 
 using namespace std;
-/* should the dynamic array of files be 
-global or created in main?? confusion. I think we can make a global 
-array so that it can be globally accessed. Do give thoughts. 
-BEcause werna we will have to pass everything to the show meny function ?*/
+
 
 struct File {
     string fileName;
@@ -17,21 +14,21 @@ struct File {
     string category;
     string creationDate;
     string lastModifiedDate;
-    vector<string> dependencies;
+    vector<string> dependencies; // we can make a list ?
 };
 
-void displayFiles(const class DynamicArray& files);  // Forward declaration for displayFiles
-void sortFiles(class DynamicArray& files);  // Forward declaration for sortFiles
+// forward declerations
+void displayFiles(const class DynamicArray& files);  
+void sortFiles(class DynamicArray& files);  
 void mergeSort(class DynamicArray& files, int left, int right);
 void bubbleSort(class DynamicArray& files);
 void insertionSort(class DynamicArray& files);
 void quickSort(class DynamicArray& files, int low, int high);
 
 void displayFiles(const DynamicArray& files);
-void addFile();
+void addFile(class DynamicArray& files);
 void deleteFile();
 void moveFile();
-void sortFiles(DynamicArray& files);
 void searchFiles();
 void displayByCategory();
 void displayDependencies();
@@ -165,7 +162,7 @@ void showMenu(DynamicArray& files) {
                 displayFiles(files);
                 break;
             case 2:
-                //addFile();
+                addFile(files);
                 break;
             case 3:
                 //deleteFile();
@@ -229,24 +226,24 @@ void sortFiles(DynamicArray& files)
     switch (sortChoice) 
     {
         case 1:
-            mergeSort(files, 0, files.getSize() - 1); // Call merge sort
+            mergeSort(files, 0, files.getSize() - 1); 
             cout << "Files sorted by Name.\n";
-            displayFiles(files); // Display sorted files
+            displayFiles(files); 
             break;
         case 2:
-            bubbleSort(files); // Call bubble sort
+            bubbleSort(files); 
             cout << "Files sorted by Size.\n";
-            displayFiles(files); // Display sorted files
+            displayFiles(files); 
             break;
         case 3:
-            insertionSort(files); // Call insertion sort
+            insertionSort(files); 
             cout << "Files sorted by Creation Date.\n";
-            displayFiles(files); // Display sorted files
+            displayFiles(files); 
             break;
         case 4:
-            quickSort(files, 0, files.getSize() - 1); // Call quick sort
+            quickSort(files, 0, files.getSize() - 1); 
             cout << "Files sorted by Last Modified Date.\n";
-            displayFiles(files); // Display sorted files
+            displayFiles(files); 
             break;
         default:
             cout << "Invalid choice. Returning to main menu.\n";
@@ -293,7 +290,7 @@ void bubbleSort(DynamicArray& files)
     int n = files.getSize();
     for (int i = 0; i < n - 1; i++) {
         for (int j = 0; j < n - i - 1; j++) {
-            if (files[j].sizeKB > files[j + 1].sizeKB) 
+            if (files[j].sizeKB < files[j + 1].sizeKB) 
             {
                 swap(files[j], files[j + 1]);
             }
@@ -343,12 +340,98 @@ void quickSort(DynamicArray& files, int low, int high)
     }
 }
 
+void addFile( DynamicArray& files) {
+    // Create a new File object
+    File newFile;
+
+    // Take user input for file details
+    cout << "Enter the file name: ";
+    cin >> newFile.fileName;
+
+    cout << "Enter the file extension: ";
+    cin >> newFile.extension;
+
+    cout << "Enter the file size in KB: ";
+    cin >> newFile.sizeKB;
+
+    cout << "Enter the file category: ";
+    cin >> newFile.category;
+
+    cout << "Enter the file creation date (YYYY-MM-DD): ";
+    cin >> newFile.creationDate;
+
+    cout << "Enter the file last modified date (YYYY-MM-DD): ";
+    cin >> newFile.lastModifiedDate;
+
+    // Optionally, you can allow the user to enter file dependencies (separated by semicolons)
+    cout << "Enter file dependencies (separated by semicolons, leave empty if none): ";
+    string dependenciesStr;
+    cin.ignore();  // To ignore the newline left in the buffer by previous input
+    getline(cin, dependenciesStr);
+
+    // Parse the dependencies string
+    stringstream depStream(dependenciesStr);
+    string dep;
+    while (getline(depStream, dep, ';')) {
+        newFile.dependencies.push_back(dep);
+    }
+
+    // Add the new file to the DynamicArray
+    files.addFile(newFile);
+    cout << "File successfully added!" << endl;
+}
+
+
+void saveToFile(const DynamicArray& files, const string& filepath) 
+{
+    ofstream outFile(filepath);  // Open the file in overwrite mode
+
+    if (!outFile.is_open()) {
+        cerr << "Error: Unable to open file " << filepath << endl;
+        return;
+    }
+
+    // Write the header to the file
+    outFile << "FileName,Extension,SizeKB,Category,CreationDate,LastModifiedDate,Dependencies" << endl;
+
+    // Write each file's data to the file
+    for (int i = 0; i < files.getSize(); i++) {
+        const File& file = files[i];
+
+        outFile << file.fileName << ","
+                << file.extension << ","
+                << file.sizeKB << ","
+                << file.category << ","
+                << file.creationDate << ","
+                << file.lastModifiedDate;
+
+        // Write the dependencies (if any)
+        if (!file.dependencies.empty()) {
+            for (size_t j = 0; j < file.dependencies.size(); j++) {
+                outFile << file.dependencies[j];
+                if (j < file.dependencies.size() - 1) {
+                    outFile << ";";  // Separate dependencies with a semicolon
+                }
+            }
+        }
+
+        outFile << endl;  // End of the line for each file
+    }
+
+    outFile.close();  // Close the file
+    cout << "File data successfully saved to " << filepath << endl;
+}
+
 int main()
 {
-    string filePath = "/Users/aqsazeeshan/Desktop/FileOrganizationSystem/MockDataSet.txt";
+    string filePath = "MockDataSet.txt";
     DynamicArray files;
     readFromFile(files, filePath);
     cout << "Number of files read: " << files.getSize() << endl;
     displayFiles(files);
+
+    showMenu(files);
+
+    saveToFile(files, filePath);
 
 }
