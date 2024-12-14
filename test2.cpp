@@ -100,6 +100,12 @@ class DynamicArray
             return files[index];  // Allows access but not modification
         }
 
+        void decrementSize() {
+            if (size > 0) {
+             size--;
+            }
+}
+
 };
 
 void addDependency(DependencyNode*& head, const string& dependencyName) {
@@ -152,7 +158,7 @@ void readFromFile(DynamicArray& files, const string& filepath, unordered_map<str
     cout << "File data successfully read into the DynamicArray.\n";
 }
 
-void showMenu(DynamicArray& files) {
+void showMenu(DynamicArray& files, unordered_map<string, unordered_set<string>>& dependencyGraph) {
     int choice;
     do {
         cout << "==========================================" << endl;
@@ -182,7 +188,7 @@ void showMenu(DynamicArray& files) {
                 displayFiles(files);
                 break;
             case 2:
-                addFile(files);
+                addFile(files, dependencyGraph);
                 break;
             case 3:
                 deleteFile(files, dependencyGraph);
@@ -247,7 +253,7 @@ void deleteFile(DynamicArray& files, unordered_map<string, unordered_set<string>
             for (int k = i; k < files.getSize() - 1; k++) {
                 files[k] = files[k + 1];
             }
-            files.getSize()--; // Decrease the size of the array
+            files.decrementSize(); // Decrease the size of the array
             break;
         }
     }
