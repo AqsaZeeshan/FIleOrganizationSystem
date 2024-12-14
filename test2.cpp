@@ -262,6 +262,9 @@ void deleteFile(DynamicArray& files, unordered_map<string, unordered_set<string>
         cout << "Error: File not found." << endl;
     }
 }
+}
+
+
 
 void displayDependencies(const DynamicArray& files) {
     cout << "==========================================" << endl;
@@ -531,7 +534,7 @@ int main()
     cout << "Number of files read: " << files.getSize() << endl;
     displayFiles(files);
 
-    showMenu(files);
+    showMenu(files, dependencyGraph);
 
     saveToFile(files, filePath);
 
