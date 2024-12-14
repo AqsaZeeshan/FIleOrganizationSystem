@@ -4,6 +4,8 @@
 #include <string>
 #include <fstream>
 #include<sstream>
+#include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -22,8 +24,9 @@ struct File {
     string creationDate;
     string lastModifiedDate;
     DependencyNode* dependenciesHead;
+    bool isDeleted;
 
-    File() : dependenciesHead(nullptr) {}
+    File() : dependenciesHead(nullptr), isDeleted(false) {} 
 };
 
 // forward declerations
@@ -35,8 +38,8 @@ void insertionSort(class DynamicArray& files);
 void quickSort(class DynamicArray& files, int low, int high);
 
 void displayFiles(const DynamicArray& files);
-void addFile(class DynamicArray& files);
-void deleteFile();
+void addFile(DynamicArray& files, unordered_map<string, unordered_set<string>>& dependencyGraph);
+void deleteFile(DynamicArray& files, unordered_map<string, unordered_set<string>>& dependencyGraph);
 void moveFile();
 void searchFiles();
 void displayByCategory();
@@ -105,7 +108,7 @@ void addDependency(DependencyNode*& head, const string& dependencyName) {
     head = newNode;
 }
 
-void readFromFile( DynamicArray& files, const string& filepath) 
+void readFromFile(DynamicArray& files, const string& filepath, unordered_map<string, unordered_set<string>>& dependencyGraph) 
 {
     ifstream file(filepath); // Open the file
     if (!file.is_open()) 
@@ -138,6 +141,7 @@ void readFromFile( DynamicArray& files, const string& filepath)
         string dep;
         while (getline(depStream, dep, ';')) { // Assuming dependencies are separated by semicolons
             addDependency(fileEntry.dependenciesHead, dep);
+            dependencyGraph[dep].insert(fileEntry.fileName); 
         }       
 
         // Add the File object to the DynamicArray
@@ -181,7 +185,7 @@ void showMenu(DynamicArray& files) {
                 addFile(files);
                 break;
             case 3:
-                //deleteFile();
+                deleteFile(files, dependencyGraph);
                 break;
             case 4:
                 //moveFile();
@@ -205,6 +209,52 @@ void showMenu(DynamicArray& files) {
                 cout << "Invalid choice. Please try again." << endl;
         }
     } while (choice != 9);
+}
+
+void deleteFile(DynamicArray& files, unordered_map<string, unordered_set<string>>& dependencyGraph) {
+    string fileName;
+    cout << "Enter the name of the file to delete: ";
+    cin >> fileName;
+
+    bool fileFound = false;
+    for (int i = 0; i < files.getSize(); i++) {
+        if (files[i].fileName == fileName) {
+            fileFound = true;
+            if (dependencyGraph.find(fileName) != dependencyGraph.end() && !dependencyGraph[fileName].empty()) {
+                cout << "Error: The file is a dependency for other files. Do you still want to delete it? (yes/no): ";
+                string choice;
+                cin >> choice;
+                if (choice == "no") {
+                    return;
+                } 
+                
+            files[i].isDeleted = true;
+            for (const string& dependentFile : dependencyGraph[fileName]) {
+                for (int j = 0; j < files.getSize(); j++) {
+                    if (files[j].fileName == dependentFile) {
+                        DependencyNode* current = files[j].dependenciesHead;
+                        while (current != nullptr) {
+                            if (current->dependencyName == fileName) {
+                                current->dependencyName = "\033[31m" + current->dependencyName + "\033[0m"; // Color the dependency name red
+                            }
+                            current = current->next;
+                        }
+                    }
+                }
+            }
+
+            // Remove the file from the DynamicArray
+            for (int k = i; k < files.getSize() - 1; k++) {
+                files[k] = files[k + 1];
+            }
+            files.getSize()--; // Decrease the size of the array
+            break;
+        }
+    }
+
+    if (!fileFound) {
+        cout << "Error: File not found." << endl;
+    }
 }
 
 void displayDependencies(const DynamicArray& files) {
@@ -383,7 +433,7 @@ void quickSort(DynamicArray& files, int low, int high)
     }
 }
 
-void addFile( DynamicArray& files) {
+void addFile(DynamicArray& files, unordered_map<string, unordered_set<string>>& dependencyGraph) {
     // Create a new File object
     File newFile;
 
@@ -417,6 +467,7 @@ void addFile( DynamicArray& files) {
     string dep;
     while (getline(depStream, dep, ';')) {
         addDependency(newFile.dependenciesHead, dep);
+        dependencyGraph[dep].insert(newFile.fileName);
     }
 
     // Add the new file to the DynamicArray
@@ -469,7 +520,8 @@ int main()
 {
     string filePath = "MockDataSet.txt";
     DynamicArray files;
-    readFromFile(files, filePath);
+    unordered_map<string, unordered_set<string>> dependencyGraph;
+    readFromFile(files, filePath, dependencyGraph);
     cout << "Number of files read: " << files.getSize() << endl;
     displayFiles(files);
 
