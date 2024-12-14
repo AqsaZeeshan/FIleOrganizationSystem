@@ -22,7 +22,6 @@ struct File {
     string creationDate;
     string lastModifiedDate;
     DependencyNode* dependenciesHead;
-    vector<string> dependencies; // we can make a list ?
 
     File() : dependenciesHead(nullptr) {}
 };
@@ -41,7 +40,8 @@ void deleteFile();
 void moveFile();
 void searchFiles();
 void displayByCategory();
-void displayDependencies();
+void displayDependencies(const DynamicArray& files);
+void addDependency(DependencyNode*& head, const string& dependencyName);
 
 class DynamicArray
 {
@@ -99,6 +99,12 @@ class DynamicArray
 
 };
 
+void addDependency(DependencyNode*& head, const string& dependencyName) {
+    DependencyNode* newNode = new DependencyNode(dependencyName);
+    newNode->next = head;
+    head = newNode;
+}
+
 void readFromFile( DynamicArray& files, const string& filepath) 
 {
     ifstream file(filepath); // Open the file
@@ -131,8 +137,8 @@ void readFromFile( DynamicArray& files, const string& filepath)
         stringstream depStream(dependenciesStr);
         string dep;
         while (getline(depStream, dep, ';')) { // Assuming dependencies are separated by semicolons
-            fileEntry.dependencies.push_back(dep);
-        }
+            addDependency(fileEntry.dependenciesHead, dep);
+        }       
 
         // Add the File object to the DynamicArray
         files.addFile(fileEntry);
@@ -190,7 +196,7 @@ void showMenu(DynamicArray& files) {
                 //displayByCategory();
                 break;
             case 8:
-                //displayDependencies();
+                displayDependencies(files);
                 break;
             case 9:
                 cout << "Exiting File Organization System..." << endl;
@@ -199,6 +205,30 @@ void showMenu(DynamicArray& files) {
                 cout << "Invalid choice. Please try again." << endl;
         }
     } while (choice != 9);
+}
+
+void displayDependencies(const DynamicArray& files) {
+    cout << "==========================================" << endl;
+    cout << "         File Dependencies                " << endl;
+    cout << "==========================================" << endl;
+
+    for (int i = 0; i < files.getSize(); i++) {
+        const File& file = files[i];
+        cout << "File Name: " << file.fileName << endl;
+        cout << "Dependencies: ";
+        DependencyNode* head = file.dependenciesHead;
+        while (head != nullptr) {
+            cout << head->dependencyName;
+            if (head->next != nullptr) {
+                cout << " -> ";
+            }
+            head = head->next;
+        }
+        cout << endl;
+        cout << "------------------------------------------" << endl;
+    }
+
+    cout << "==========================================" << endl;
 }
 
 void displayFiles(const DynamicArray& files) {
@@ -213,12 +243,15 @@ void displayFiles(const DynamicArray& files) {
              << ", Size: " << file.sizeKB << " KB" 
              << ", Category: " << file.category 
              << ", Creation Date: " << file.creationDate 
-             << ", Last Modified Date: " << file.lastModifiedDate 
-             << endl;
+             << ", Last Modified Date: " << file.lastModifiedDate;
     }
+
+    cout << ", Dependencies: "; displayDependencies(files);
+    cout<<endl; 
 
     cout << "==========================================" << endl;
 }
+
 
 void sortFiles(DynamicArray& files)
 {
@@ -383,7 +416,7 @@ void addFile( DynamicArray& files) {
     stringstream depStream(dependenciesStr);
     string dep;
     while (getline(depStream, dep, ';')) {
-        newFile.dependencies.push_back(dep);
+        addDependency(newFile.dependenciesHead, dep);
     }
 
     // Add the new file to the DynamicArray
@@ -391,6 +424,15 @@ void addFile( DynamicArray& files) {
     cout << "File successfully added!" << endl;
 }
 
+void saveDependencies(ofstream& outFile, DependencyNode* head) {
+    while (head != nullptr) {
+        outFile << head->dependencyName;
+        if (head->next != nullptr) {
+            outFile << ";";
+        }
+        head = head->next;
+    }
+}
 
 void saveToFile(const DynamicArray& files, const string& filepath) 
 {
@@ -414,16 +456,7 @@ void saveToFile(const DynamicArray& files, const string& filepath)
                 << file.category << ","
                 << file.creationDate << ","
                 << file.lastModifiedDate;
-
-        // Write the dependencies (if any)
-        if (!file.dependencies.empty()) {
-            for (size_t j = 0; j < file.dependencies.size(); j++) {
-                outFile << file.dependencies[j];
-                if (j < file.dependencies.size() - 1) {
-                    outFile << ";";  // Separate dependencies with a semicolon
-                }
-            }
-        }
+        saveDependencies(outFile, file.dependenciesHead);        
 
         outFile << endl;  // End of the line for each file
     }
