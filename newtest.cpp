@@ -100,11 +100,28 @@ class DynamicArray
             return files[index];  // Allows access but not modification
         }
 
-        void decrementSize() {
-            if (size > 0) {
+        void decrementSize() 
+        {
+            if (size > 0) 
+            {
              size--;
             }
-}
+        }
+
+        ~DynamicArray() 
+        {
+            for (int i = 0; i < size; i++) 
+            {
+                DependencyNode* current = files[i].dependenciesHead;
+                while (current != nullptr) {
+                    DependencyNode* toDelete = current;
+                    current = current->next;
+                    delete toDelete;
+                }
+            }
+            delete[] files;
+        }
+
 
 };
 
