@@ -198,9 +198,8 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
         cout << "     b) By Size" << endl;
         cout << "     c) By Creation Date" << endl;
         cout << "     d) By Last Modified Date" << endl;
-        cout << "6. Search Files" <<endl;// needs to be tweeked
+        cout << "6. Search Files" <<endl;// done 
         cout << "     a) By Name" << endl;
-        cout << "     b) By File Extension" <<endl;
         cout << "7. Display Files by Category" << endl; // should be done
         cout << "8. Display File Dependencies (Graph View)" << endl;
         cout << "9. Exit" << endl;

@@ -126,7 +126,8 @@ class DynamicArray
 
 };
 
-void addDependency(DependencyNode*& head, const string& dependencyName) {
+void addDependency(DependencyNode*& head, const string& dependencyName) 
+{
     DependencyNode* newNode = new DependencyNode(dependencyName);
     newNode->next = head;
     head = newNode;
@@ -183,7 +184,8 @@ void readFromFile(DynamicArray& files, const string& filepath, vector<vector<int
     cout << "File data successfully read into the DynamicArray.\n";
 }
 
-void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
+void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames) 
+{
     int choice;
     do {
         cout << "==========================================" << endl;
@@ -198,9 +200,8 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
         cout << "     b) By Size" << endl;
         cout << "     c) By Creation Date" << endl;
         cout << "     d) By Last Modified Date" << endl;
-        cout << "6. Search Files" <<endl;// needs to be tweeked
+        cout << "6. Search Files" <<endl;//done
         cout << "     a) By Name" << endl;
-        cout << "     b) By File Extension" <<endl;
         cout << "7. Display Files by Category" << endl; // should be done
         cout << "8. Display File Dependencies (Graph View)" << endl;
         cout << "9. Exit" << endl;
@@ -208,7 +209,8 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
         cout << "Enter your choice: ";
         cin >> choice;
 
-        switch (choice) {
+        switch (choice) 
+        {
             case 1:
                 displayFiles(files, dependencyGraph, fileNames);
                 break;
@@ -288,7 +290,8 @@ void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vect
 
 
 
-void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames) {
+void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames) 
+{
     cout << "==========================================" << endl;
     cout << "         File Dependencies                " << endl;
     cout << "==========================================" << endl;
@@ -449,6 +452,8 @@ void sortFiles(DynamicArray& files, vector<vector<int> >& dependencyGraph, vecto
             cout << "Invalid choice. Returning to main menu.\n";
     }
 }
+
+// sort files by namwe
 void merge(DynamicArray& files, int left, int mid, int right) 
 {
     int tempSize = right - left + 1;
