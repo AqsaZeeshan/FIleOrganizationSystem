@@ -36,12 +36,13 @@ void mergeSort(class DynamicArray& files, int left, int right);
 void bubbleSort(class DynamicArray& files);
 void insertionSort(class DynamicArray& files);
 void quickSort(class DynamicArray& files, int low, int high);
+void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vector<vector<int> >& dependencyGraph);
 
 void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void addFile(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void moveFile();
-void searchFiles();
+void searchAllFile(const DynamicArray& files, const vector<string>& fileNames, const string& searchName, vector<vector<int> >& dependencyGraph);
 void displayByCategory();
 void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames);
 void addDependency(DependencyNode*& head, const string& dependencyName);
@@ -224,7 +225,7 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
                 sortFiles(files, dependencyGraph, fileNames);
                 break;
             case 6:
-                //searchFiles();
+                searchFiles(files,fileNames, dependencyGraph);
                 break;
             case 7:
                 //displayByCategory();
@@ -310,7 +311,83 @@ void displayDependencies(const DynamicArray& files, const vector<vector<int> >& 
 
     cout << "==========================================" << endl;
 }
+void searchAllFile(const DynamicArray& files, const vector<string>& fileNames, const string& searchName, vector<vector<int> >& dependencyGraph) {
+    bool found = false;
+    for (int i = 0; i < files.getSize(); i++) {
+        
+        if (files[i].fileName == searchName) {
+            found = true;
+            // Display file details
+            cout << "==========================================" << endl;
+            cout << "             File Details                 " << endl;
+            cout << "==========================================" << endl;
+            cout << "File Name: " << files[i].fileName;
+            cout     << ", Extension: " << files[i].extension
+                 << ", Size: " << files[i].sizeKB << " KB"
+                 << ", Category: " << files[i].category
+                 << ", Creation Date: " << files[i].creationDate
+                 << ", Last Modified Date: " << files[i].lastModifiedDate;
 
+            // Display dependencies
+            cout << ", Dependencies: ";
+            DependencyNode* head = files[i].dependenciesHead;
+            if (head == nullptr) {
+                cout << "No dependencies";
+            } else {
+                while (head != nullptr) {
+                    cout << head->dependencyName;
+                    if (head->next != nullptr) {
+                        cout << " -> ";
+                    }
+                    head = head->next;
+                }
+            }
+            cout << endl;
+            cout << "------------------------------------------" << endl;
+        }
+    }
+
+    if (!found) {
+        cout << "File with the name '" << searchName << "' not found." << endl;
+    }
+}
+
+void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vector<vector<int> >& dependencyGraph)
+{
+    int ch;
+    string name;
+    cout<<"Enter file name to search: ";cin>> name;
+    cout<<"     1. Search all files."<< endl;
+    cout<<"     2. Search Category."<< endl;
+    cin>>ch;
+    switch(ch)
+    {
+        case 1:
+            searchAllFile(files, fileNames, name, dependencyGraph);
+            break;
+        case 2:
+            int ch2;
+            cout<<"Enter category you wish to search: ";
+            cout<<"     1. Documents."<< endl;
+            cout<<"     2. Desktop."<< endl;
+            cout<<"     3. Media."<< endl;
+            cout<<"     4. Programming."<< endl;
+            cin>>ch2;
+            switch(ch)
+            {
+                case 1:
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                case 4:
+                    break;
+            }
+            break;           
+    }
+
+}
 void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
     cout << "==========================================" << endl;
     cout << "             File Details                 " << endl;
