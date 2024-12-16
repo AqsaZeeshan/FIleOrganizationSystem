@@ -1,3 +1,7 @@
+//stack undo opperation
+//queue redo or batch processing
+//graphs for dependancies
+
 #include <iostream>
 #include <vector>
 #include <string>
