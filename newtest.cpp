@@ -30,20 +30,20 @@ struct File {
 };
 
 // forward declerations
-void displayFiles(const class DynamicArray& files);  
-void sortFiles(class DynamicArray& files);  
+
+void sortFiles(class DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);  
 void mergeSort(class DynamicArray& files, int left, int right);
 void bubbleSort(class DynamicArray& files);
 void insertionSort(class DynamicArray& files);
 void quickSort(class DynamicArray& files, int low, int high);
 
-void displayFiles(const DynamicArray& files, vector<vector<int>>& dependencyGraph, vector<string>& fileNames);
-void addFile(DynamicArray& files,vector<vector<int>>& dependencyGraph, vector<string>& fileNames);
-void deleteFile(DynamicArray& files, vector<vector<int>>& dependencyGraph, vector<string>& fileNames);
+void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
+void addFile(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
+void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void moveFile();
 void searchFiles();
 void displayByCategory();
-void displayDependencies(const DynamicArray& files, const vector<vector<int>>& dependencyGraph, const vector<string>& fileNames);
+void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames);
 void addDependency(DependencyNode*& head, const string& dependencyName);
 
 class DynamicArray
@@ -114,7 +114,7 @@ void addDependency(DependencyNode*& head, const string& dependencyName) {
     head = newNode;
 }
 
-void readFromFile(DynamicArray& files, const string& filepath, vector<vector<int>>& dependencyGraph, vector<string>& fileNames) 
+void readFromFile(DynamicArray& files, const string& filepath, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) 
 {
     ifstream file(filepath); // Open the file
     if (!file.is_open()) 
@@ -165,7 +165,7 @@ void readFromFile(DynamicArray& files, const string& filepath, vector<vector<int
     cout << "File data successfully read into the DynamicArray.\n";
 }
 
-void showMenu(DynamicArray& files,vector<vector<int>>& dependencyGraph, vector<string>& fileNames) {
+void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
     int choice;
     do {
         cout << "==========================================" << endl;
@@ -204,7 +204,7 @@ void showMenu(DynamicArray& files,vector<vector<int>>& dependencyGraph, vector<s
                 //moveFile();
                 break;
             case 5:
-                sortFiles(files);
+                sortFiles(files, dependencyGraph, fileNames);
                 break;
             case 6:
                 //searchFiles();
@@ -224,7 +224,7 @@ void showMenu(DynamicArray& files,vector<vector<int>>& dependencyGraph, vector<s
     } while (choice != 9);
 }
 
-void deleteFile(DynamicArray& files, vector<vector<int>>& dependencyGraph, vector<string>& fileNames) {
+void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
     string fileName;
     cout << "Enter the name of the file to delete: ";
     cin >> fileName;
@@ -270,7 +270,7 @@ void deleteFile(DynamicArray& files, vector<vector<int>>& dependencyGraph, vecto
 
 
 
-void displayDependencies(const DynamicArray& files, const vector<vector<int>>& dependencyGraph, const vector<string>& fileNames) {
+void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames) {
     cout << "==========================================" << endl;
     cout << "         File Dependencies                " << endl;
     cout << "==========================================" << endl;
@@ -294,7 +294,7 @@ void displayDependencies(const DynamicArray& files, const vector<vector<int>>& d
     cout << "==========================================" << endl;
 }
 
-void displayFiles(const DynamicArray& files, vector<vector<int>>& dependencyGraph, vector<string>& fileNames) {
+void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
     cout << "==========================================" << endl;
     cout << "             File Details                 " << endl;
     cout << "==========================================" << endl;
@@ -316,7 +316,7 @@ void displayFiles(const DynamicArray& files, vector<vector<int>>& dependencyGrap
 }
 
 
-void sortFiles(DynamicArray& files)
+void sortFiles(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames)
 {
     int sortChoice;
     cout << "==========================================" << endl;
@@ -334,22 +334,22 @@ void sortFiles(DynamicArray& files)
         case 1:
             mergeSort(files, 0, files.getSize() - 1); 
             cout << "Files sorted by Name.\n";
-            displayFiles(files); 
+            displayFiles(files, dependencyGraph, fileNames); 
             break;
         case 2:
             bubbleSort(files); 
             cout << "Files sorted by Size.\n";
-            displayFiles(files); 
+            displayFiles(files, dependencyGraph, fileNames); 
             break;
         case 3:
             insertionSort(files); 
             cout << "Files sorted by Creation Date.\n";
-            displayFiles(files); 
+            displayFiles(files, dependencyGraph, fileNames); 
             break;
         case 4:
             quickSort(files, 0, files.getSize() - 1); 
             cout << "Files sorted by Last Modified Date.\n";
-            displayFiles(files); 
+            displayFiles(files, dependencyGraph, fileNames); 
             break;
         default:
             cout << "Invalid choice. Returning to main menu.\n";
@@ -446,7 +446,7 @@ void quickSort(DynamicArray& files, int low, int high)
     }
 }
 
-void addFile(DynamicArray& files, vector<vector<int>>& dependencyGraph, vector<string>& fileNames) {
+void addFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
     // Create a new File object
     File newFile;
 
@@ -540,11 +540,11 @@ int main()
 {
     string filePath = "MockDataSet.txt";
     DynamicArray files;
-    vector<vector<int>> dependencyGraph;
+    vector<vector<int> > dependencyGraph;
     vector<string> fileNames;
     readFromFile(files, filePath, dependencyGraph, fileNames);
     cout << "Number of files read: " << files.getSize() << endl;
-    displayFiles(files);
+    displayFiles(files, dependencyGraph, fileNames);
 
     showMenu(files, dependencyGraph, fileNames);
 
