@@ -3,9 +3,11 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include<sstream>
-#include<algorithm>
-
+#include <sstream>
+#include <algorithm>
+#include <unordered_map>
+#include <stack>
+#include <queue>
 
 using namespace std;
 
@@ -41,7 +43,7 @@ void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vec
 void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void addFile(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
-void moveFile();
+void moveFile(File* file);
 void searchAllFile(const DynamicArray& files, const vector<string>& fileNames, const string& searchName, vector<vector<int> >& dependencyGraph);
 void displayByCategory();
 void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames);
@@ -125,6 +127,140 @@ class DynamicArray
 
 
 };
+
+// AVL Tree Node
+struct AVLNode {
+    File* file;
+    AVLNode* left;
+    AVLNode* right;
+    int height;
+
+    AVLNode(File* file) : file(file), left(nullptr), right(nullptr), height(1) {}
+};
+
+// AVL Tree Class
+class AVLTree {
+public:
+    AVLNode* root;
+
+    AVLTree() : root(nullptr) {}
+
+    // Utility functions for AVL tree balancing
+    int height(AVLNode* node) {
+        return node ? node->height : 0;
+    }
+
+    int balanceFactor(AVLNode* node) {
+        return height(node->left) - height(node->right);
+    }
+
+    void updateHeight(AVLNode* node) {
+        node->height = 1 + max(height(node->left), height(node->right));
+    }
+
+    AVLNode* rotateRight(AVLNode* node) {
+        AVLNode* newRoot = node->left;
+        node->left = newRoot->right;
+        newRoot->right = node;
+        updateHeight(node);
+        updateHeight(newRoot);
+        return newRoot;
+    }
+
+    AVLNode* rotateLeft(AVLNode* node) {
+        AVLNode* newRoot = node->right;
+        node->right = newRoot->left;
+        newRoot->left = node;
+        updateHeight(node);
+        updateHeight(newRoot);
+        return newRoot;
+    }
+
+    AVLNode* balance(AVLNode* node) {
+        updateHeight(node);
+        if (balanceFactor(node) > 1) {
+            if (balanceFactor(node->left) < 0) {
+                node->left = rotateLeft(node->left);
+            }
+            return rotateRight(node);
+        }
+        if (balanceFactor(node) < -1) {
+            if (balanceFactor(node->right) > 0) {
+                node->right = rotateRight(node->right);
+            }
+            return rotateLeft(node);
+        }
+        return node;
+    }
+
+    // Insert a file into the AVL tree
+    AVLNode* insert(AVLNode* node, File* file) {
+        if (!node) return new AVLNode(file);
+        if (file->fileName < node->file->fileName) {
+            node->left = insert(node->left, file);
+        } else {
+            node->right = insert(node->right, file);
+        }
+        return balance(node);
+    }
+
+    // Delete a file from the AVL tree
+    AVLNode* remove(AVLNode* node, File* file) {
+        if (!node) return node;
+        if (file->fileName < node->file->fileName) {
+            node->left = remove(node->left, file);
+        } else if (file->fileName > node->file->fileName) {
+            node->right = remove(node->right, file);
+        } else {
+            if (!node->left) {
+                AVLNode* temp = node->right;
+                delete node;
+                return temp;
+            } else if (!node->right) {
+                AVLNode* temp = node->left;
+                delete node;
+                return temp;
+            }
+            AVLNode* temp = getMin(node->right);
+            node->file = temp->file;
+            node->right = remove(node->right, temp->file);
+        }
+        return balance(node);
+    }
+
+    AVLNode* getMin(AVLNode* node) {
+        while (node->left) node = node->left;
+        return node;
+    }
+
+    // Insert a file into the tree
+    void insertFile(File* file) {
+        root = insert(root, file);
+    }
+
+    // Remove a file from the tree
+    void removeFile(File* file) {
+        root = remove(root, file);
+    }
+
+    void inorderTraversal(AVLNode* node) {
+        if (!node) return;
+        inorderTraversal(node->left);
+        cout << "File: " << node->file->fileName << " | Category: " << node->file->category << endl;
+        inorderTraversal(node->right);
+    }
+
+    void displayFiles() {
+        inorderTraversal(root);
+    }
+};
+
+// Global hash map to store files in different categories
+unordered_map<string, AVLTree> categoryTreeMap;
+
+// Undo stack and batch queue
+stack<string> undoStack;
+queue<string> batchQueue;
 
 void addDependency(DependencyNode*& head, const string& dependencyName) 
 {
@@ -221,7 +357,7 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
                 deleteFile(files, dependencyGraph, fileNames);
                 break;
             case 4:
-                //moveFile();
+                moveFile(files);
                 break;
             case 5:
                 sortFiles(files, dependencyGraph, fileNames);
@@ -230,7 +366,7 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
                 searchFiles(files,fileNames, dependencyGraph);
                 break;
             case 7:
-                //displayByCategory();
+                displayByCategory();
                 break;
             case 8:
                 displayDependencies(files, dependencyGraph, fileNames);
@@ -594,6 +730,27 @@ void addFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<
     cout << "File successfully added!" << endl;
 }
 
+void moveFile(File* file) {
+    // Prompt user for the new category
+    string newCategory;
+    cout << "Enter the category to move the file \"" << file->fileName << "\": ";
+    getline(cin, newCategory);
+
+    // Remove the file from its current category
+    categoryTreeMap[file->category].removeFile(file);
+
+    // Change the file's category
+    file->category = newCategory;
+
+    // Add the file to the new category's AVL tree
+    categoryTreeMap[newCategory].insertFile(file);
+
+    // Push the operation into the undo stack
+    undoStack.push("Move file: " + file->fileName + " to category: " + newCategory);
+
+    cout << "File \"" << file->fileName << "\" moved to category: " << newCategory << endl;
+}
+
 void saveDependencies(ofstream& outFile, DependencyNode* head) {
     while (head != nullptr) {
         outFile << head->dependencyName;
@@ -633,6 +790,41 @@ void saveToFile(const DynamicArray& files, const string& filepath)
 
     outFile.close();  // Close the file
     cout << "File data successfully saved to " << filepath << endl;
+}
+
+// Function to display all categories and their files
+void displayAllCategories() {
+    for (auto& pair : categoryTreeMap) {
+        cout << "\nCategory: " << pair.first << endl;
+        pair.second.displayFiles();
+    }
+}
+
+// Undo the last operation
+void undo() {
+    if (!undoStack.empty()) {
+        string lastOperation = undoStack.top();
+        undoStack.pop();
+        // Here, you can implement logic to revert the last operation (e.g., move the file back to the previous category).
+        cout << "Undoing: " << lastOperation << endl;
+    } else {
+        cout << "No operations to undo." << endl;
+    }
+}
+
+// Function to handle batch processing of file-related operations
+void batchProcess() {
+    while (!batchQueue.empty()) {
+        string operation = batchQueue.front();
+        batchQueue.pop();
+        // Execute the batch operation here (e.g., move files).
+        cout << "Processing: " << operation << endl;
+    }
+}
+
+// Function to add a file to the batch queue for processing
+void addToBatchQueue(const string& operation) {
+    batchQueue.push(operation);
 }
 
 int main()
