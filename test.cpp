@@ -588,7 +588,8 @@ void addFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<
     cout << "File successfully added!" << endl;
 }
 
-void saveDependencies(ofstream& outFile, DependencyNode* head) {
+void saveDependencies(ofstream& outFile, DependencyNode* head) 
+{
     while (head != nullptr) {
         outFile << head->dependencyName;
         if (head->next != nullptr) {

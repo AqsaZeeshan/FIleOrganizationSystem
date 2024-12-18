@@ -43,7 +43,7 @@ void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vec
 void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void addFile(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
-void moveFile(File* file);
+void moveFile(class DynamicArray& files);
 void searchAllFile(const DynamicArray& files, const vector<string>& fileNames, const string& searchName, vector<vector<int> >& dependencyGraph);
 void displayByCategory();
 void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames);
@@ -366,7 +366,7 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
                 searchFiles(files,fileNames, dependencyGraph);
                 break;
             case 7:
-                displayByCategory();
+                //displayByCategory();
                 break;
             case 8:
                 displayDependencies(files, dependencyGraph, fileNames);
@@ -730,25 +730,54 @@ void addFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<
     cout << "File successfully added!" << endl;
 }
 
-void moveFile(File* file) {
-    // Prompt user for the new category
+
+
+void moveFile(DynamicArray& files) {
+    string name;
+    cout << "Enter the name of the file to move: ";
+    cin >> name;
+
+    // Search for the file in the dynamic array
+    File* fileToMove = nullptr;
+    for (int i = 0; i < files.getSize(); i++) {
+        size_t extPos = files[i].fileName.find_last_of('.');
+        string baseFileName = (extPos == string::npos) ? files[i].fileName : files[i].fileName.substr(0, extPos);
+
+        if (baseFileName == name) {
+            fileToMove = &files[i];
+            break;
+        }
+    }
+
+    // If file not found, inform the user
+    if (fileToMove == nullptr) {
+        cout << "File \"" << name << "\" not found." << endl;
+        return;
+    }
+
+    // Display the current category of the file
+    cout << "The file \"" << fileToMove->fileName << "\" is currently in the category: " << fileToMove->category << endl;
+
+    // Ask the user for the new category
     string newCategory;
-    cout << "Enter the category to move the file \"" << file->fileName << "\": ";
+    cout << "Enter the new category to move the file \"" << fileToMove->fileName << "\": ";
+    cin.ignore(); // Ignore leftover newline character
     getline(cin, newCategory);
 
-    // Remove the file from its current category
-    categoryTreeMap[file->category].removeFile(file);
+    // Remove the file from its current category's AVL tree
+    categoryTreeMap[fileToMove->category].removeFile(fileToMove);
 
     // Change the file's category
-    file->category = newCategory;
+    fileToMove->category = newCategory;
 
     // Add the file to the new category's AVL tree
-    categoryTreeMap[newCategory].insertFile(file);
+    categoryTreeMap[newCategory].insertFile(fileToMove);
 
     // Push the operation into the undo stack
-    undoStack.push("Move file: " + file->fileName + " to category: " + newCategory);
+    undoStack.push("Move file: " + fileToMove->fileName + " to category: " + newCategory);
 
-    cout << "File \"" << file->fileName << "\" moved to category: " << newCategory << endl;
+    // Inform the user of the successful move
+    cout << "File \"" << fileToMove->fileName << "\" moved to category: " << newCategory << endl;
 }
 
 void saveDependencies(ofstream& outFile, DependencyNode* head) {
