@@ -864,7 +864,7 @@ int main()
     vector<string> fileNames;
     readFromFile(files, filePath, dependencyGraph, fileNames);
     cout << "Number of files read: " << files.getSize() << endl;
-    displayFiles(files, dependencyGraph, fileNames);
+
 
     showMenu(files, dependencyGraph, fileNames);
 
