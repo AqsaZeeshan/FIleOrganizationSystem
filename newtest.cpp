@@ -19,7 +19,8 @@ struct DependencyNode
     DependencyNode(const string& name) : dependencyName(name), next(nullptr) {}
 };
 
-struct File {
+struct File 
+{
     string fileName;
     string extension;
     int sizeKB;
@@ -40,6 +41,7 @@ void bubbleSort(class DynamicArray& files);
 void insertionSort(class DynamicArray& files);
 void quickSort(class DynamicArray& files, int low, int high);
 void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vector<vector<int> >& dependencyGraph);
+void undo(class DynamicArray& files);
 
 void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
 void addFile(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
@@ -88,6 +90,29 @@ class DynamicArray
         int getSize() const
         {
             return size;
+        }
+
+        void removeFile(int index) 
+        {
+            if (index < 0 || index >= size) {
+                throw out_of_range("Index out of range");
+            }
+
+            // Clean up dependencies for the file being removed
+            DependencyNode* current = files[index].dependenciesHead;
+            while (current != nullptr) {
+                DependencyNode* toDelete = current;
+                current = current->next;
+                delete toDelete;
+            }
+
+            // Shift all files after the removed one to fill the gap
+            for (int i = index; i < size - 1; i++) {
+                files[i] = files[i + 1];
+            }
+
+            // Decrement the size
+            size--;
         }
 
         File& operator[](int index)
@@ -403,7 +428,8 @@ void readFromFile(DynamicArray& files, const string& filepath, vector<vector<int
         while (getline(depStream, dep, ';')) { // Assuming dependencies are separated by semicolons
             addDependency(fileEntry.dependenciesHead, dep);
             int depIndex = find(fileNames.begin(), fileNames.end(), dep) - fileNames.begin(); 
-            if (depIndex == fileNames.size()) { 
+            if (depIndex == fileNames.size()) 
+            { 
                 fileNames.push_back(dep); 
                 dependencyGraph.push_back(vector<int>()); 
             } 
@@ -440,7 +466,8 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
         cout << "     a) By Name" << endl;
         cout << "7. Display Files by Category" << endl; // should be done
         cout << "8. Display File Dependencies (Graph View)" << endl;
-        cout << "9. Exit" << endl;
+        cout << "9. Undo Last Operation.  "<<endl;
+        cout << "10. Exit" << endl;
         cout << "==========================================" << endl;
         cout << "Enter your choice: ";
         cin >> choice;
@@ -471,13 +498,16 @@ void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<
             case 8:
                 displayDependencies(files, dependencyGraph, fileNames);
                 break;
-            case 9:
+            case 9: 
+                undo(files);
+                break;
+            case 10:
                 cout << "Exiting File Organization System..." << endl;
                 break;
             default:
                 cout << "Invalid choice. Please try again." << endl;
         }
-    } while (choice != 9);
+    } while (choice != 10);
 }
 
 void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
@@ -508,7 +538,26 @@ void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vect
                     current = current->next;
                 }
             }
-
+            string dependenciesStr = "";
+            DependencyNode* dep = files[i].dependenciesHead;
+            while (dep != nullptr) 
+            {
+                dependenciesStr += dep->dependencyName;
+                if (dep->next != nullptr) 
+                {
+                    dependenciesStr += "|";
+                }
+                dep = dep->next;
+            }
+            // delete for undo
+             string operation = "DELETE," + files[i].fileName + "," +
+                       files[i].extension + "," +
+                       files[i].category + "," +
+                       to_string(files[i].sizeKB) + "," +
+                       files[i].creationDate + "," +
+                       files[i].lastModifiedDate + "," +
+                       dependenciesStr;
+                        undoStack.push(operation);
             // Remove the file from the DynamicArray
             for (int k = i; k < files.getSize() - 1; k++) {
                 files[k] = files[k + 1];
@@ -828,6 +877,9 @@ void addFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<
     fileNames.push_back(newFile.fileName); 
     dependencyGraph.push_back(vector<int>()); 
     cout << "File successfully added!" << endl;
+
+    string operation = "ADD," + newFile.fileName;
+    undoStack.push(operation);
 }
 
 
@@ -867,14 +919,17 @@ void moveFile(DynamicArray& files) {
     // Remove the file from its current category's AVL tree
     categoryTreeMap[fileToMove->category].removeFile(fileToMove);
 
+    string operation = "MOVE," + name + fileToMove->extension+"," + fileToMove->category + "," + newCategory;
+
     // Change the file's category
     fileToMove->category = newCategory;
 
     // Add the file to the new category's AVL tree
     categoryTreeMap[newCategory].insertFile(fileToMove);
+    
+    // pushinh operation to stack
+    undoStack.push(operation);
 
-    // Push the operation into the undo stack
-    undoStack.push("Move file: " + fileToMove->fileName + " to category: " + newCategory);
 
     // Inform the user of the successful move
     cout << "File \"" << fileToMove->fileName << "\" moved to category: " << newCategory << endl;
@@ -930,17 +985,134 @@ void displayAllCategories() {
 }
 
 // Undo the last operation
-void undo() {
-    if (!undoStack.isEmpty()) {
+void undo(DynamicArray& files) 
+{
+    if (!undoStack.isEmpty()) 
+    {
         string lastOperation = undoStack.top();
         undoStack.pop();
-        // Here, you can implement logic to revert the last operation (e.g., move the file back to the previous category).
-        cout << "Undoing: " << lastOperation << endl;
-    } else 
+
+        stringstream ss(lastOperation);
+        string operationT;
+        getline(ss, operationT, ',');
+        if (operationT == "MOVE") 
+        {
+            stringstream ss(lastOperation);
+            string operationType, fileName, oldCategory, newCategory;
+            getline(ss, operationType, ',');
+            getline(ss, fileName, ',');
+            getline(ss, oldCategory, ',');
+            getline(ss, newCategory, ',');
+            // Move the file back to its old category
+            for (int i = 0; i < files.getSize(); i++) 
+            {
+                if (files[i].fileName == fileName) 
+                {
+                    // Remove from new category
+                    categoryTreeMap[newCategory].removeFile(&files[i]);
+
+                    // Update file's category
+                    files[i].category = oldCategory;
+
+                    // Add back to old category
+                    categoryTreeMap[oldCategory].insertFile(&files[i]);
+
+                    cout << "Undo MOVE: File \"" << fileName << "\" moved back to category \"" << oldCategory << "\"" << endl;
+                    return;
+                }
+            }
+            cout << "Error: File \"" << fileName << "\" not found in the system." << endl;
+        } 
+        else if (operationT == "DELETE") 
+        {
+           {
+            stringstream ss(lastOperation);
+            string operationType, fileName, extension, category, fileSizeStr, creationDate, lastModifiedDate, dependenciesStr;
+
+            getline(ss, operationType, ',');
+            getline(ss, fileName, ',');
+            getline(ss, extension, ',');
+            getline(ss, category, ',');
+            getline(ss, fileSizeStr, ',');
+            getline(ss, creationDate, ',');
+            getline(ss, lastModifiedDate, ',');
+            getline(ss, dependenciesStr);
+            // Recreate the deleted file object
+            File restoredFile;
+            restoredFile.fileName = fileName;
+            restoredFile.extension = extension;
+            restoredFile.category = category;
+            restoredFile.sizeKB = stoi(fileSizeStr); // Convert size back to integer
+            restoredFile.creationDate = creationDate;
+            restoredFile.lastModifiedDate = lastModifiedDate;
+
+            // Reconstruct the dependency list
+            if (!dependenciesStr.empty()) 
+            {
+                stringstream depStream(dependenciesStr);
+                string dependency;
+                while (getline(depStream, dependency, '|')) 
+                {
+                    DependencyNode* newDependency = new DependencyNode(dependency);
+                    if (restoredFile.dependenciesHead == nullptr) 
+                    {
+                        restoredFile.dependenciesHead = newDependency;
+                    } 
+                    else 
+                    {
+                        DependencyNode* temp = restoredFile.dependenciesHead;
+                        while (temp->next != nullptr) 
+                        {
+                            temp = temp->next;
+                        }
+                        temp->next = newDependency;
+                    }
+                }
+            }
+
+            // Add the file back to the dynamic array
+            files.addFile(restoredFile);
+
+            // Add the file back to its category in the AVL tree
+            categoryTreeMap[category].insertFile(&files[files.getSize() - 1]);
+
+            cout << "Undo DELETE: File \"" << fileName << "\" restored to category \"" << category << "\"" << endl;
+        } 
+        } 
+        else if (operationT == "ADD") 
+        {
+            stringstream ss(lastOperation);
+            string operationType, fileName;
+            getline(ss, operationType, ',');
+            getline(ss, fileName, ',');
+            // Remove the added file
+            for (int i = 0; i < files.getSize(); i++) 
+            {
+                if (files[i].fileName == fileName) 
+                {
+                    // Remove from category
+                    categoryTreeMap[files[i].category].removeFile(&files[i]);
+
+                    // Remove from the dynamic array
+                    files.removeFile(i);
+
+                    cout << "Undo ADD: File \"" << fileName << "\" removed from the system." << endl;
+                    return;
+                }
+            }
+            cout << "Error: File \"" << fileName << "\" not found in the system." << endl;
+        } 
+        else 
+        {
+            cout << "Unknown operation type in undo stack: " << operationT << endl;
+        }
+    } 
+    else 
     {
         cout << "No operations to undo." << endl;
     }
 }
+
 
 // Function to handle batch processing of file-related operations
 void batchProcess() {
