@@ -255,12 +255,112 @@ public:
     }
 };
 
+class Stack 
+{
+private:
+    static const int MAX_SIZE = 100; 
+    string data[MAX_SIZE];      
+    int topIndex;                 
+
+public:
+
+    Stack() : topIndex(-1) {}
+
+
+    void push(const string& value) 
+    {
+        if (topIndex == MAX_SIZE - 1) {
+            throw overflow_error("Stack overflow: Cannot push more elements.");
+        }
+        data[++topIndex] = value;
+    }
+
+    void pop() 
+    {
+        if (topIndex == -1) {
+            throw underflow_error("Stack underflow: Cannot pop from an empty stack.");
+        }
+        --topIndex;
+    }
+
+    string top() const 
+    {
+        if (topIndex == -1) {
+            throw underflow_error("Stack is empty: No top element.");
+        }
+        return data[topIndex];
+    }
+
+
+    bool isEmpty() const 
+    {
+        return topIndex == -1;
+    }
+
+
+    int size() const 
+    {
+        return topIndex + 1;
+    }
+};
+
+class Queue 
+{
+private:
+    static const int MAX_SIZE = 100; 
+    string data[MAX_SIZE];   
+    int frontIndex;               
+    int rearIndex;                   
+    int currentSize;                 
+
+public:
+    // Constructor
+    Queue() : frontIndex(0), rearIndex(-1), currentSize(0) {}
+
+    // Enqueue (add) a string to the queue
+    void enqueue(const string& value) {
+        if (currentSize == MAX_SIZE) {
+            throw overflow_error("Queue overflow: Cannot enqueue more elements.");
+        }
+        rearIndex = (rearIndex + 1) % MAX_SIZE;
+        data[rearIndex] = value;
+        currentSize++;
+    }
+
+    // Dequeue (remove) the front element from the queue
+    void dequeue() {
+        if (isEmpty()) {
+            throw underflow_error("Queue underflow: Cannot dequeue from an empty queue.");
+        }
+        frontIndex = (frontIndex + 1) % MAX_SIZE;
+        currentSize--;
+    }
+
+    // Return the front element of the queue
+    string front() const {
+        if (isEmpty()) {
+            throw underflow_error("Queue is empty: No front element.");
+        }
+        return data[frontIndex];
+    }
+
+    // Check if the queue is empty
+    bool isEmpty() const {
+        return currentSize == 0;
+    }
+
+    // Get the current size of the queue
+    int size() const {
+        return currentSize;
+    }
+};
+
 // Global hash map to store files in different categories
 unordered_map<string, AVLTree> categoryTreeMap;
 
 // Undo stack and batch queue
-stack<string> undoStack;
-queue<string> batchQueue;
+Stack undoStack;
+Queue batchQueue;
 
 void addDependency(DependencyNode*& head, const string& dependencyName) 
 {
@@ -831,21 +931,22 @@ void displayAllCategories() {
 
 // Undo the last operation
 void undo() {
-    if (!undoStack.empty()) {
+    if (!undoStack.isEmpty()) {
         string lastOperation = undoStack.top();
         undoStack.pop();
         // Here, you can implement logic to revert the last operation (e.g., move the file back to the previous category).
         cout << "Undoing: " << lastOperation << endl;
-    } else {
+    } else 
+    {
         cout << "No operations to undo." << endl;
     }
 }
 
 // Function to handle batch processing of file-related operations
 void batchProcess() {
-    while (!batchQueue.empty()) {
+    while (!batchQueue.isEmpty()) {
         string operation = batchQueue.front();
-        batchQueue.pop();
+        batchQueue.dequeue();
         // Execute the batch operation here (e.g., move files).
         cout << "Processing: " << operation << endl;
     }
@@ -853,7 +954,7 @@ void batchProcess() {
 
 // Function to add a file to the batch queue for processing
 void addToBatchQueue(const string& operation) {
-    batchQueue.push(operation);
+    batchQueue.enqueue(operation);
 }
 
 int main()
