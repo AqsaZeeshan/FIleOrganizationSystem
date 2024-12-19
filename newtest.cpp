@@ -514,10 +514,10 @@ void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vect
     string fileName;
     cout << "Enter the name of the file to delete: ";
     cin >> fileName;
-
+    
     bool fileFound = false;
     for (int i = 0; i < files.getSize(); i++) {
-        if (files[i].fileName == fileName) {
+        if (  fileName == files[i].fileName)  {
             fileFound = true;
             int fileIndex = find(fileNames.begin(), fileNames.end(), fileName) - fileNames.begin();
             if (!dependencyGraph[fileIndex].empty()) {
@@ -567,7 +567,8 @@ void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vect
         }
     }
 
-    if (!fileFound) {
+    if (!fileFound) 
+    {
         cout << "Error: File not found." << endl;
     }
 }
