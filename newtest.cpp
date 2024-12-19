@@ -11,7 +11,8 @@
 
 using namespace std;
 
-struct DependencyNode {
+struct DependencyNode 
+{
     string dependencyName;  // Name of the dependency
     DependencyNode* next;   // Pointer to the next node
 
@@ -314,10 +315,9 @@ private:
     int currentSize;                 
 
 public:
-    // Constructor
+
     Queue() : frontIndex(0), rearIndex(-1), currentSize(0) {}
 
-    // Enqueue (add) a string to the queue
     void enqueue(const string& value) {
         if (currentSize == MAX_SIZE) {
             throw overflow_error("Queue overflow: Cannot enqueue more elements.");
@@ -327,8 +327,8 @@ public:
         currentSize++;
     }
 
-    // Dequeue (remove) the front element from the queue
-    void dequeue() {
+    void dequeue() 
+    {
         if (isEmpty()) {
             throw underflow_error("Queue underflow: Cannot dequeue from an empty queue.");
         }
@@ -336,21 +336,21 @@ public:
         currentSize--;
     }
 
-    // Return the front element of the queue
-    string front() const {
+    string front() const 
+    {
         if (isEmpty()) {
             throw underflow_error("Queue is empty: No front element.");
         }
         return data[frontIndex];
     }
 
-    // Check if the queue is empty
-    bool isEmpty() const {
+    bool isEmpty() const 
+    {
         return currentSize == 0;
     }
 
-    // Get the current size of the queue
-    int size() const {
+    int size() const 
+    {
         return currentSize;
     }
 };
