@@ -264,8 +264,7 @@ void displayFiles(const DynamicArray& files);
 void displayDependencies(const DependenciesGraph& graph);
 void displayCategories(const AVLTree& categoryTree);
 void sortFiles(DynamicArray& files, int option);
-void undo(DynamicArray& files, stack<string>& undoStack);
-void batchProcess(queue<string>& batchQueue, DynamicArray& files, AVLTree& categoryTree);
+void undo(DynamicArray& files);
 void merge(DynamicArray& files, int left, int mid, int right);
 void mergeSort(DynamicArray& files, int left, int right); // Sort by size
 void bubbleSort(DynamicArray& files); // Sort by creation date
@@ -775,7 +774,8 @@ void showMenu(DynamicArray& files, DependenciesGraph& graph, HashMap& categoryMa
         }
     } while (choice != 11);
 }
-int main() {
+int main() 
+{
     string filePath = "MockDataSet.txt";
 
     // Initialize core components
