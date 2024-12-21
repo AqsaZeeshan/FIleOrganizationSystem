@@ -1,769 +1,606 @@
-//created this to edit fucntions and test codes, while keeping the initial code in test.cpp
 #include <iostream>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-#include <unordered_map>
-
+#include <stdexcept>
 using namespace std;
 
-struct DependencyNode 
-{
-    string dependencyName;  // Name of the dependency
-    DependencyNode* next;   // Pointer to the next node
+// DependencyNode for linked list representation
+struct DependencyNode {
+    string dependencyName;
+    DependencyNode* next;
 
     DependencyNode(const string& name) : dependencyName(name), next(nullptr) {}
 };
 
-struct File 
-{
+// Updated DependenciesGraph 
+class DependenciesGraph {
+private:
+    struct FileNode {
+        string fileName;
+        DependencyNode* dependenciesHead;
+        FileNode* next;
+
+        FileNode(const string& name) : fileName(name), dependenciesHead(nullptr), next(nullptr) {}
+    };
+
+    FileNode* head;
+
+    FileNode* findFile(const string& fileName) {
+        FileNode* current = head;
+        while (current) {
+            if (current->fileName == fileName)
+                return current;
+            current = current->next;
+        }
+        return nullptr;
+    }
+
+public:
+    DependenciesGraph() : head(nullptr) {}
+
+    void addFile(const string& fileName) {
+        if (!findFile(fileName)) {
+            FileNode* newNode = new FileNode(fileName);
+            newNode->next = head;
+            head = newNode;
+        }
+    }
+
+    void addDependency(const string& fileName, const string& dependencyName) {
+        FileNode* fileNode = findFile(fileName);
+        if (!fileNode) {
+            addFile(fileName);
+            fileNode = findFile(fileName);
+        }
+
+        DependencyNode* newDep = new DependencyNode(dependencyName);
+        newDep->next = fileNode->dependenciesHead;
+        fileNode->dependenciesHead = newDep;
+    }
+
+    void markDependencyAsDeleted(const string& dependencyName) {
+        FileNode* current = head;
+        while (current) {
+            DependencyNode* depCurrent = current->dependenciesHead;
+            while (depCurrent) {
+                if (depCurrent->dependencyName == dependencyName) {
+                    depCurrent->dependencyName = "\033[31m" + depCurrent->dependencyName + "\033[0m"; // Mark dependency name in red
+                }
+                depCurrent = depCurrent->next;
+            }
+            current = current->next;
+        }
+    }
+
+    void displayDependencies() {
+        FileNode* current = head;
+        while (current) {
+            cout << "File: " << current->fileName << " depends on: ";
+            DependencyNode* depCurrent = current->dependenciesHead;
+            while (depCurrent) {
+                cout << depCurrent->dependencyName;
+                if (depCurrent->next)
+                    cout << ", ";
+                depCurrent = depCurrent->next;
+            }
+            cout << endl;
+            current = current->next;
+        }
+    }
+
+    ~DependenciesGraph() {
+        FileNode* current = head;
+        while (current) {
+            DependencyNode* depCurrent = current->dependenciesHead;
+            while (depCurrent) {
+                DependencyNode* temp = depCurrent;
+                depCurrent = depCurrent->next;
+                delete temp;
+            }
+            FileNode* temp = current;
+            current = current->next;
+            delete temp;
+        }
+    }
+};
+
+// File structure
+struct File {
     string fileName;
     string extension;
     int sizeKB;
     string category;
     string creationDate;
     string lastModifiedDate;
-    DependencyNode* dependenciesHead;
     bool isDeleted;
 
-    File() : dependenciesHead(nullptr), isDeleted(false) {} 
+    File() : sizeKB(0), isDeleted(false) {}
 };
 
-// forward declerations
+// DynamicArray class to manage files
+class DynamicArray {
+private:
+    File* files;
+    int capacity;
+    int size;
 
-void sortFiles(class DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);  
-void mergeSort(class DynamicArray& files, int left, int right);
-void bubbleSort(class DynamicArray& files);
-void insertionSort(class DynamicArray& files);
-void quickSort(class DynamicArray& files, int low, int high);
-void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vector<vector<int> >& dependencyGraph);
-void undo(class DynamicArray& files);
-
-void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
-void addFile(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
-void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames);
-void moveFile(class DynamicArray& files);
-void searchAllFile(const DynamicArray& files, const vector<string>& fileNames, const string& searchName, vector<vector<int> >& dependencyGraph);
-void displayByCategory();
-void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames);
-void addDependency(DependencyNode*& head, const string& dependencyName);
-
-class DynamicArray
-{
-    private:
-        File* files;
-        int capacity;
-        int size;
-
-        void resize()
-        {
-            capacity = capacity * 2;
-            File* newFiles = new File[capacity];
-            for(int i = 0; i < size; i++)
-            {
-                newFiles[i] = files[i];
-            }
-            delete[] files;
-            files = newFiles;
+    void resize() {
+        capacity *= 2;
+        File* newFiles = new File[capacity];
+        for (int i = 0; i < size; i++) {
+            newFiles[i] = files[i];
         }
-    public:
-        DynamicArray(int initialCapacity = 10)
-        {
-            capacity = initialCapacity;
-            size = 0;
-            files = new File[capacity];
-        }
+        delete[] files;
+        files = newFiles;
+    }
 
-        void addFile(const File& file)
-        {
-            if(size == capacity)
-            {
-                resize();
-            }
-            files[size++] = file;
-        }
+public:
+    DynamicArray(int initialCapacity = 10) : capacity(initialCapacity), size(0) {
+        files = new File[capacity];
+    }
 
-        int getSize() const
-        {
-            return size;
-        }
+    void addFile(const File& file) {
+        if (size == capacity)
+            resize();
+        files[size++] = file;
+    }
 
-        void removeFile(int index) 
-        {
-            if (index < 0 || index >= size) {
-                throw out_of_range("Index out of range");
-            }
+    int getSize() const {
+        return size;
+    }
 
-            // Clean up dependencies for the file being removed
-            DependencyNode* current = files[index].dependenciesHead;
-            while (current != nullptr) {
-                DependencyNode* toDelete = current;
-                current = current->next;
-                delete toDelete;
-            }
+    File& operator[](int index) {
+        if (index < 0 || index >= size)
+            throw out_of_range("Index out of range");
+        return files[index];
+    }
 
-            // Shift all files after the removed one to fill the gap
-            for (int i = index; i < size - 1; i++) {
-                files[i] = files[i + 1];
-            }
-
-            // Decrement the size
-            size--;
-        }
-
-        File& operator[](int index)
-        {
-            if(index < 0 || index >= size)
-            {
-                throw out_of_range("Index out of range");
-            }
-            return files[index];
-        }
-
-        const File& operator[](int index) const 
-        {
-            return files[index];  // Allows access but not modification
-        }
-
-        void decrementSize() 
-        {
-            if (size > 0) 
-            {
-             size--;
-            }
-        }
-
-        ~DynamicArray() 
-        {
-            for (int i = 0; i < size; i++) 
-            {
-                DependencyNode* current = files[i].dependenciesHead;
-                while (current != nullptr) {
-                    DependencyNode* toDelete = current;
-                    current = current->next;
-                    delete toDelete;
-                }
-            }
-            delete[] files;
-        }
-
-
+    ~DynamicArray() {
+        delete[] files;
+    }
 };
 
-// AVL Tree Node
+// AVL Tree Node for managing categories
 struct AVLNode {
-    File* file;
+    string category;
     AVLNode* left;
     AVLNode* right;
     int height;
 
-    AVLNode(File* file) : file(file), left(nullptr), right(nullptr), height(1) {}
+    AVLNode(const string& category) : category(category), left(nullptr), right(nullptr), height(1) {}
 };
 
-// AVL Tree Class
+// AVL Tree class for managing category nodes
 class AVLTree {
-public:
+private:
     AVLNode* root;
 
-    AVLTree() : root(nullptr) {}
-
-    // Utility functions for AVL tree balancing
-    int height(AVLNode* node) {
+    int getHeight(AVLNode* node) {
         return node ? node->height : 0;
     }
 
-    int balanceFactor(AVLNode* node) {
-        return height(node->left) - height(node->right);
+    int getBalanceFactor(AVLNode* node) {
+        return node ? getHeight(node->left) - getHeight(node->right) : 0;
     }
 
-    void updateHeight(AVLNode* node) {
-        node->height = 1 + max(height(node->left), height(node->right));
+    AVLNode* rotateRight(AVLNode* y) {
+        AVLNode* x = y->left;
+        AVLNode* T = x->right;
+        x->right = y;
+        y->left = T;
+        y->height = max(getHeight(y->left), getHeight(y->right)) + 1;
+        x->height = max(getHeight(x->left), getHeight(x->right)) + 1;
+        return x;
     }
 
-    AVLNode* rotateRight(AVLNode* node) {
-        AVLNode* newRoot = node->left;
-        node->left = newRoot->right;
-        newRoot->right = node;
-        updateHeight(node);
-        updateHeight(newRoot);
-        return newRoot;
+    AVLNode* rotateLeft(AVLNode* x) {
+        AVLNode* y = x->right;
+        AVLNode* T = y->left;
+        y->left = x;
+        x->right = T;
+        x->height = max(getHeight(x->left), getHeight(x->right)) + 1;
+        y->height = max(getHeight(y->left), getHeight(y->right)) + 1;
+        return y;
     }
 
-    AVLNode* rotateLeft(AVLNode* node) {
-        AVLNode* newRoot = node->right;
-        node->right = newRoot->left;
-        newRoot->left = node;
-        updateHeight(node);
-        updateHeight(newRoot);
-        return newRoot;
-    }
+    AVLNode* insert(AVLNode* node, const string& category) {
+        if (!node) return new AVLNode(category);
+        if (category < node->category)
+            node->left = insert(node->left, category);
+        else if (category > node->category)
+            node->right = insert(node->right, category);
+        else
+            return node;
 
-    AVLNode* balance(AVLNode* node) {
-        updateHeight(node);
-        if (balanceFactor(node) > 1) {
-            if (balanceFactor(node->left) < 0) {
-                node->left = rotateLeft(node->left);
-            }
+        node->height = max(getHeight(node->left), getHeight(node->right)) + 1;
+        int balance = getBalanceFactor(node);
+
+        if (balance > 1 && category < node->left->category)
+            return rotateRight(node);
+        if (balance < -1 && category > node->right->category)
+            return rotateLeft(node);
+        if (balance > 1 && category > node->left->category) {
+            node->left = rotateLeft(node->left);
             return rotateRight(node);
         }
-        if (balanceFactor(node) < -1) {
-            if (balanceFactor(node->right) > 0) {
-                node->right = rotateRight(node->right);
-            }
+        if (balance < -1 && category < node->right->category) {
+            node->right = rotateRight(node->right);
             return rotateLeft(node);
         }
+
         return node;
     }
 
-    // Insert a file into the AVL tree
-    AVLNode* insert(AVLNode* node, File* file) {
-        if (!node) return new AVLNode(file);
-        if (file->fileName < node->file->fileName) {
-            node->left = insert(node->left, file);
-        } else {
-            node->right = insert(node->right, file);
+    void inorder(AVLNode* node) {
+        if (node) {
+            inorder(node->left);
+            cout << "Category: " << node->category << endl;
+            inorder(node->right);
         }
-        return balance(node);
     }
-
-    // Delete a file from the AVL tree
-    AVLNode* remove(AVLNode* node, File* file) {
-        if (!node) return node;
-        if (file->fileName < node->file->fileName) {
-            node->left = remove(node->left, file);
-        } else if (file->fileName > node->file->fileName) {
-            node->right = remove(node->right, file);
-        } else {
-            if (!node->left) {
-                AVLNode* temp = node->right;
-                delete node;
-                return temp;
-            } else if (!node->right) {
-                AVLNode* temp = node->left;
-                delete node;
-                return temp;
-            }
-            AVLNode* temp = getMin(node->right);
-            node->file = temp->file;
-            node->right = remove(node->right, temp->file);
-        }
-        return balance(node);
-    }
-
-    AVLNode* getMin(AVLNode* node) {
-        while (node->left) node = node->left;
-        return node;
-    }
-
-    // Insert a file into the tree
-    void insertFile(File* file) {
-        root = insert(root, file);
-    }
-
-    // Remove a file from the tree
-    void removeFile(File* file) {
-        root = remove(root, file);
-    }
-
-    void inorderTraversal(AVLNode* node) {
-        if (!node) return;
-        inorderTraversal(node->left);
-        cout << "File: " << node->file->fileName << " | Category: " << node->file->category << endl;
-        inorderTraversal(node->right);
-    }
-
-    void displayFiles() {
-        inorderTraversal(root);
-    }
-};
-
-class Stack 
-{
-private:
-    static const int MAX_SIZE = 100; 
-    string data[MAX_SIZE];      
-    int topIndex;                 
 
 public:
+    AVLTree() : root(nullptr) {}
 
-    Stack() : topIndex(-1) {}
-
-
-    void push(const string& value) 
-    {
-        if (topIndex == MAX_SIZE - 1) {
-            throw overflow_error("Stack overflow: Cannot push more elements.");
-        }
-        data[++topIndex] = value;
+    void insert(const string& category) {
+        root = insert(root, category);
     }
 
-    void pop() 
-    {
-        if (topIndex == -1) {
-            throw underflow_error("Stack underflow: Cannot pop from an empty stack.");
-        }
-        --topIndex;
-    }
-
-    string top() const 
-    {
-        if (topIndex == -1) {
-            throw underflow_error("Stack is empty: No top element.");
-        }
-        return data[topIndex];
-    }
-
-
-    bool isEmpty() const 
-    {
-        return topIndex == -1;
-    }
-
-
-    int size() const 
-    {
-        return topIndex + 1;
+    void display() {
+        inorder(root);
     }
 };
 
-class Queue 
-{
-private:
-    static const int MAX_SIZE = 100; 
-    string data[MAX_SIZE];   
-    int frontIndex;               
-    int rearIndex;                   
-    int currentSize;                 
+void readFromFile(const string& filepath, DynamicArray& files, DependenciesGraph& graph);
+void showMenu(DynamicArray& files, DependenciesGraph& graph, AVLTree& categoryTree);
+void saveToFile(const DynamicArray& files, const string& filepath);
+void addFile(DynamicArray& files, AVLTree& categoryTree);
+void deleteFile(DynamicArray& files, const string& fileName, DependenciesGraph& graph);
+void moveFile(DynamicArray& files, AVLTree& categoryTree);
+void displayFiles(const DynamicArray& files);
+void displayDependencies(const DependenciesGraph& graph);
+void displayCategories(const AVLTree& categoryTree);
+void sortFiles(DynamicArray& files, int option);
+void undo(DynamicArray& files, stack<string>& undoStack);
+void batchProcess(queue<string>& batchQueue, DynamicArray& files, AVLTree& categoryTree);
+void merge(DynamicArray& files, int left, int mid, int right);
+void mergeSort(DynamicArray& files, int left, int right); // Sort by size
+void bubbleSort(DynamicArray& files); // Sort by creation date
+void insertionSort(DynamicArray& files); // Sort by name
+int partition(DynamicArray& files, int low, int high);
+void quickSort(DynamicArray& files, int low, int high); // Sort by last modified date
 
-public:
 
-    Queue() : frontIndex(0), rearIndex(-1), currentSize(0) {}
-
-    void enqueue(const string& value) {
-        if (currentSize == MAX_SIZE) {
-            throw overflow_error("Queue overflow: Cannot enqueue more elements.");
-        }
-        rearIndex = (rearIndex + 1) % MAX_SIZE;
-        data[rearIndex] = value;
-        currentSize++;
-    }
-
-    void dequeue() 
-    {
-        if (isEmpty()) {
-            throw underflow_error("Queue underflow: Cannot dequeue from an empty queue.");
-        }
-        frontIndex = (frontIndex + 1) % MAX_SIZE;
-        currentSize--;
-    }
-
-    string front() const 
-    {
-        if (isEmpty()) {
-            throw underflow_error("Queue is empty: No front element.");
-        }
-        return data[frontIndex];
-    }
-
-    bool isEmpty() const 
-    {
-        return currentSize == 0;
-    }
-
-    int size() const 
-    {
-        return currentSize;
-    }
-};
-
-// Global hash map to store files in different categories
-unordered_map<string, AVLTree> categoryTreeMap;
-
-// Undo stack and batch queue
-Stack undoStack;
-Queue batchQueue;
-
-void addDependency(DependencyNode*& head, const string& dependencyName) 
-{
-    DependencyNode* newNode = new DependencyNode(dependencyName);
-    newNode->next = head;
-    head = newNode;
-}
-
-void readFromFile(DynamicArray& files, const string& filepath, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) 
-{
-    ifstream file(filepath); // Open the file
-    if (!file.is_open()) 
-    {
-        cerr<< "Error: Unable to open file " << filepath << endl;
+void readFromFile(const string& filepath, DynamicArray& files, DependenciesGraph& graph) {
+    ifstream file(filepath);
+    if (!file.is_open()) {
+        cerr << "Error: Unable to open file " << filepath << endl;
         return;
     }
 
-    string line; 
-    getline(file, line); // Skip the header line
+    string line;
+    while (getline(file, line)) {
+        stringstream ss(line);
+        File newFile;
+        string dependencies;
 
-    while (getline(file, line)) 
-    {
-        stringstream ss(line); // this converts the current line variable to to a stringstream.
-        File fileEntry; // temp file
-        string sizeStr, dependenciesStr;
+        getline(ss, newFile.fileName, ',');
+        getline(ss, newFile.extension, ',');
+        ss >> newFile.sizeKB;
+        getline(ss, newFile.category, ',');
+        getline(ss, newFile.creationDate, ',');
+        getline(ss, newFile.lastModifiedDate, ',');
+        getline(ss, dependencies, ',');
 
-        // Read values from the line
-        getline(ss, fileEntry.fileName, ',');
-        getline(ss, fileEntry.extension, ',');
-        getline(ss, sizeStr, ',');
-        fileEntry.sizeKB = stoi(sizeStr);
-        getline(ss, fileEntry.category, ',');
-        getline(ss, fileEntry.creationDate, ',');
-        getline(ss, fileEntry.lastModifiedDate, ',');
-        getline(ss, dependenciesStr, ',');
+        files.addFile(newFile);
+        graph.addFile(newFile.fileName);
 
-        // Parse dependencies if any
-        stringstream depStream(dependenciesStr);
+        stringstream depStream(dependencies);
         string dep;
-        while (getline(depStream, dep, ';')) { // Assuming dependencies are separated by semicolons
-            addDependency(fileEntry.dependenciesHead, dep);
-            int depIndex = find(fileNames.begin(), fileNames.end(), dep) - fileNames.begin(); 
-            if (depIndex == fileNames.size()) 
-            { 
-                fileNames.push_back(dep); 
-                dependencyGraph.push_back(vector<int>()); 
-            } 
-            dependencyGraph[depIndex].push_back(files.getSize()); 
-        }       
-
-        // Add the File object to the DynamicArray
-        files.addFile(fileEntry);
-        fileNames.push_back(fileEntry.fileName); 
-        dependencyGraph.push_back(vector<int>()); 
-    }    
-
-    file.close(); // Close the file
-    cout << "File data successfully read into the DynamicArray.\n";
-}
-
-void showMenu(DynamicArray& files,vector<vector<int> >& dependencyGraph, vector<string>& fileNames) 
-{
-    int choice;
-    do {
-        cout << "==========================================" << endl;
-        cout << "         File Organization System         " <<endl;
-        cout << "==========================================" <<endl;
-        cout << "1. View All Files" <<endl;//done
-        cout << "2. Add a New File" <<endl;//done
-        cout << "3. Delete a File" << endl;// should be done
-        cout << "4. Move a File to a Different Category" <<endl;// should be done
-        cout << "5. Sort Files" << endl;//done
-        cout << "     a) By Name" << endl;
-        cout << "     b) By Size" << endl;
-        cout << "     c) By Creation Date" << endl;
-        cout << "     d) By Last Modified Date" << endl;
-        cout << "6. Search Files" <<endl;//done
-        cout << "     a) By Name" << endl;
-        cout << "7. Display Files by Category" << endl; // should be done
-        cout << "8. Display File Dependencies (Graph View)" << endl;
-        cout << "9. Undo Last Operation.  "<<endl;
-        cout << "10. Exit" << endl;
-        cout << "==========================================" << endl;
-        cout << "Enter your choice: ";
-        cin >> choice;
-
-        switch (choice) 
-        {
-            case 1:
-                displayFiles(files, dependencyGraph, fileNames);
-                break;
-            case 2:
-                addFile(files, dependencyGraph, fileNames);
-                break;
-            case 3:
-                deleteFile(files, dependencyGraph, fileNames);
-                break;
-            case 4:
-                moveFile(files);
-                break;
-            case 5:
-                sortFiles(files, dependencyGraph, fileNames);
-                break;
-            case 6:
-                searchFiles(files,fileNames, dependencyGraph);
-                break;
-            case 7:
-                //displayByCategory();
-                break;
-            case 8:
-                displayDependencies(files, dependencyGraph, fileNames);
-                break;
-            case 9: 
-                undo(files);
-                break;
-            case 10:
-                cout << "Exiting File Organization System..." << endl;
-                break;
-            default:
-                cout << "Invalid choice. Please try again." << endl;
+        while (getline(depStream, dep, ';')) {
+            graph.addDependency(newFile.fileName, dep);
         }
-    } while (choice != 10);
-}
+    }
 
-void deleteFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
-    string fileName;
-    cout << "Enter the name of the file to delete: ";
-    cin >> fileName;
-    
+    file.close();
+    cout << "File data successfully read into the system.\n";
+}
+void addFile(DynamicArray& files, HashMap& categoryMap) {
+    // Create a new file
+    File newFile;
+
+    // Prompt user for file details
+    cout << "Enter file details:\n";
+    cout << "File Name: ";
+    cin >> newFile.fileName;
+    cout << "Extension: ";
+    cin >> newFile.extension;
+    cout << "Size (KB): ";
+    cin >> newFile.sizeKB;
+    cout << "Category: ";
+    cin >> newFile.category;
+    cout << "Creation Date (YYYY-MM-DD): ";
+    cin >> newFile.creationDate;
+    cout << "Last Modified Date (YYYY-MM-DD): ";
+    cin >> newFile.lastModifiedDate;
+
+    // Add the file to the dynamic array
+    files.addFile(newFile);
+
+    // Add the category to the category map's AVL tree
+    categoryMap.getTree(newFile.category).insert(newFile.category);
+
+    // Confirm the addition
+    cout << "File \"" << newFile.fileName << "\" added successfully to the system.\n";
+}
+void displayFiles(const DynamicArray& files) {
+    // Check if there are any files to display
+    if (files.getSize() == 0) {
+        cout << "No files available in the system.\n";
+        return;
+    }
+
+    // Display all files
+    cout << "\nList of Files:\n";
+    cout << "=============================================================\n";
+    cout << "Name         | Extension | Size (KB) | Category  | Created       | Modified\n";
+    cout << "-------------------------------------------------------------\n";
+
+    for (int i = 0; i < files.getSize(); i++) {
+        const File& file = files[i];
+        if (!file.isDeleted) { // Only display non-deleted files
+            cout << file.fileName << " | " << file.extension
+                 << " | " << file.sizeKB << " KB | " << file.category
+                 << " | " << file.creationDate << " | " << file.lastModifiedDate << "\n";
+        }
+    }
+
+    cout << "=============================================================\n";
+}
+// Function to delete a file and mark dependencies as deleted
+void deleteFile(DynamicArray& files, const string& fileName, DependenciesGraph& graph) {
     bool fileFound = false;
+
+    // Search for the file by name in the dynamic array
     for (int i = 0; i < files.getSize(); i++) {
-        if (  fileName == files[i].fileName)  {
+        File& file = files[i];
+
+        // Check if the file matches the given name
+        if (file.fileName == fileName && !file.isDeleted) {
+            file.isDeleted = true; // Mark the file as deleted
             fileFound = true;
-            int fileIndex = find(fileNames.begin(), fileNames.end(), fileName) - fileNames.begin();
-            if (!dependencyGraph[fileIndex].empty()) {
-                cout << "Error: The file is a dependency for other files. Do you still want to delete it? (yes/no): ";
-                string choice;
-                cin >> choice;
-                if (choice == "no") {
-                    return;
-                } 
-                
-            files[i].isDeleted = true;
-           for (int dependentIndex : dependencyGraph[fileIndex]) { 
-                DependencyNode* current = files[dependentIndex].dependenciesHead; 
-                while (current != nullptr) {
-                    if (current->dependencyName == fileName) {
-                        current->dependencyName = "\033[31m" + current->dependencyName + "\033[0m"; // Color the dependency name red
-                    }
-                    current = current->next;
-                }
-            }
-            string dependenciesStr = "";
-            DependencyNode* dep = files[i].dependenciesHead;
-            while (dep != nullptr) 
-            {
-                dependenciesStr += dep->dependencyName;
-                if (dep->next != nullptr) 
-                {
-                    dependenciesStr += "|";
-                }
-                dep = dep->next;
-            }
-            // delete for undo
-             string operation = "DELETE," + files[i].fileName + "," +
-                       files[i].extension + "," +
-                       files[i].category + "," +
-                       to_string(files[i].sizeKB) + "," +
-                       files[i].creationDate + "," +
-                       files[i].lastModifiedDate + "," +
-                       dependenciesStr;
-                        undoStack.push(operation);
-            // Remove the file from the DynamicArray
-            for (int k = i; k < files.getSize() - 1; k++) {
-                files[k] = files[k + 1];
-            }
-            files.decrementSize(); // Decrease the size of the array
+
+            // Mark this file as deleted in the dependency graph
+            graph.markDependencyAsDeleted(fileName);
+
+            cout << "File \"" << fileName << "\" has been deleted successfully.\n";
             break;
         }
     }
 
-    if (!fileFound) 
-    {
-        cout << "Error: File not found." << endl;
+    // If the file was not found, print a message
+    if (!fileFound) {
+        cout << "File \"" << fileName << "\" not found or already deleted.\n";
     }
 }
+
+
+void displayDependencies(const DependenciesGraph& graph) {
+    cout << "\nDisplaying File Dependencies:\n";
+    cout << "========================================\n";
+    graph.displayDependencies();
+    cout << "========================================\n";
 }
+void saveToFile(const DynamicArray& files, const string& filepath) {
+    ofstream outFile(filepath);
 
+    // Check if the file is open
+    if (!outFile.is_open()) {
+        cerr << "Error: Unable to open file \"" << filepath << "\" for writing.\n";
+        return;
+    }
 
+    // Write the header for the CSV file
+    outFile << "FileName,Extension,SizeKB,Category,CreationDate,LastModifiedDate\n";
 
-void displayDependencies(const DynamicArray& files, const vector<vector<int> >& dependencyGraph, const vector<string>& fileNames) 
-{
-    cout << "==========================================" << endl;
-    cout << "         File Dependencies                " << endl;
-    cout << "==========================================" << endl;
-
+    // Write each file's details to the file
     for (int i = 0; i < files.getSize(); i++) {
         const File& file = files[i];
-        cout << "File Name: " << file.fileName << endl;
-        cout << "Dependencies: ";
-        DependencyNode* head = file.dependenciesHead;
-        while (head != nullptr) {
-            cout << head->dependencyName;
-            if (head->next != nullptr) {
-                cout << " -> ";
-            }
-            head = head->next;
+
+        // Only save non-deleted files
+        if (!file.isDeleted) {
+            outFile << file.fileName << ","
+                    << file.extension << ","
+                    << file.sizeKB << ","
+                    << file.category << ","
+                    << file.creationDate << ","
+                    << file.lastModifiedDate << "\n";
         }
-        cout << endl;
-        cout << "------------------------------------------" << endl;
     }
 
-    cout << "==========================================" << endl;
+    outFile.close(); // Close the file after writing
+    cout << "File data successfully saved to \"" << filepath << "\".\n";
 }
-void searchAllFile(const DynamicArray& files, const vector<string>& fileNames, const string& searchName, vector<vector<int> >& dependencyGraph) {
-    bool found = false;
-    for (int i = 0; i < files.getSize(); i++) {
-        
-        if (files[i].fileName == searchName) {
-            found = true;
-            // Display file details
-            cout << "==========================================" << endl;
-            cout << "             File Details                 " << endl;
-            cout << "==========================================" << endl;
-            cout << "File Name: " << files[i].fileName;
-            cout     << ", Extension: " << files[i].extension
-                 << ", Size: " << files[i].sizeKB << " KB"
-                 << ", Category: " << files[i].category
-                 << ", Creation Date: " << files[i].creationDate
-                 << ", Last Modified Date: " << files[i].lastModifiedDate;
+void moveFile(DynamicArray& files, HashMap& categoryMap) {
+    string fileName, newCategory;
+    bool fileFound = false;
 
-            // Display dependencies
-            cout << ", Dependencies: ";
-            DependencyNode* head = files[i].dependenciesHead;
-            if (head == nullptr) {
-                cout << "No dependencies";
-            } else {
-                while (head != nullptr) {
-                    cout << head->dependencyName;
-                    if (head->next != nullptr) {
-                        cout << " -> ";
-                    }
-                    head = head->next;
+    // Prompt user for file name
+    cout << "Enter the name of the file to move: ";
+    cin >> fileName;
+
+    // Search for the file in the dynamic array
+    for (int i = 0; i < files.getSize(); i++) {
+        File& file = files[i];
+
+        if (file.fileName == fileName && !file.isDeleted) {
+            fileFound = true;
+
+            // Display current category
+            cout << "The file \"" << file.fileName << "\" is currently in the category: " << file.category << "\n";
+
+            // Prompt user for new category
+            cout << "Enter the new category to move the file to: ";
+            cin >> newCategory;
+
+            // Update the category in the file
+            string oldCategory = file.category;
+            file.category = newCategory;
+
+            // Update the AVL trees in the HashMap
+            categoryMap.getTree(oldCategory).insert(fileName); // Remove from old tree
+            categoryMap.getTree(newCategory).insert(fileName); // Add to new tree
+
+            // Confirm the move
+            cout << "File \"" << file.fileName << "\" moved to category \"" << newCategory << "\" successfully.\n";
+
+            // Optionally push to undo stack
+            // undoStack.push("MOVE," + fileName + "," + oldCategory + "," + newCategory);
+            break;
+        }
+    }
+
+    // If the file is not found
+    if (!fileFound) {
+        cout << "File \"" << fileName << "\" not found or already deleted.\n";
+    }
+}
+void undo(DynamicArray& files, stack<string>& undoStack) {
+    if (undoStack.empty()) {
+        cout << "No operations to undo.\n";
+        return;
+    }
+
+    string lastOperation = undoStack.top();
+    undoStack.pop();
+
+    stringstream ss(lastOperation);
+    string operationType, fileName, oldCategory, newCategory;
+    getline(ss, operationType, ',');
+
+    if (operationType == "ADD") {
+        getline(ss, fileName, ',');
+        for (int i = 0; i < files.getSize(); i++) {
+            if (files[i].fileName == fileName && !files[i].isDeleted) {
+                files[i].isDeleted = true;
+                cout << "Undo ADD: File \"" << fileName << "\" removed.\n";
+                return;
+            }
+        }
+    } else if (operationType == "DELETE") {
+        File restoredFile;
+        getline(ss, restoredFile.fileName, ',');
+        getline(ss, restoredFile.extension, ',');
+        ss >> restoredFile.sizeKB;
+        getline(ss, restoredFile.category, ',');
+        getline(ss, restoredFile.creationDate, ',');
+        getline(ss, restoredFile.lastModifiedDate, ',');
+
+        files.addFile(restoredFile);
+        cout << "Undo DELETE: File \"" << restoredFile.fileName << "\" restored.\n";
+    } else if (operationType == "MOVE") {
+        getline(ss, fileName, ',');
+        getline(ss, oldCategory, ',');
+        getline(ss, newCategory, ',');
+
+        for (int i = 0; i < files.getSize(); i++) {
+            if (files[i].fileName == fileName && !files[i].isDeleted) {
+                files[i].category = oldCategory;
+                cout << "Undo MOVE: File \"" << fileName << "\" moved back to category \"" << oldCategory << "\".\n";
+                return;
+            }
+        }
+    } else {
+        cout << "Unknown operation type in undo stack.\n";
+    }
+}
+void batchProcess(queue<string>& batchQueue, DynamicArray& files, HashMap& categoryMap) {
+    while (!batchQueue.empty()) {
+        string operation = batchQueue.front();
+        batchQueue.pop();
+
+        stringstream ss(operation);
+        string operationType, fileName, category;
+        getline(ss, operationType, ',');
+
+        if (operationType == "ADD") {
+            File newFile;
+            getline(ss, newFile.fileName, ',');
+            getline(ss, newFile.extension, ',');
+            ss >> newFile.sizeKB;
+            getline(ss, newFile.category, ',');
+            getline(ss, newFile.creationDate, ',');
+            getline(ss, newFile.lastModifiedDate, ',');
+
+            files.addFile(newFile);
+            categoryMap.getTree(newFile.category).insert(newFile.fileName);
+            cout << "Batch Process: Added file \"" << newFile.fileName << "\".\n";
+        } else if (operationType == "DELETE") {
+            getline(ss, fileName, ',');
+            bool fileFound = false;
+            for (int i = 0; i < files.getSize(); i++) {
+                if (files[i].fileName == fileName && !files[i].isDeleted) {
+                    files[i].isDeleted = true;
+                    fileFound = true;
+                    cout << "Batch Process: Deleted file \"" << fileName << "\".\n";
+                    break;
                 }
             }
-            cout << endl;
-            cout << "------------------------------------------" << endl;
-        }
-    }
-
-    if (!found) {
-        cout << "File with the name '" << searchName << "' not found." << endl;
-    }
-}
-
-void searchFiles(const DynamicArray& files, const vector<string>& fileNames, vector<vector<int> >& dependencyGraph)
-{
-    int ch;
-    string name;
-    cout<<"Enter file name to search: ";cin>> name;
-    cout<<"     1. Search all files."<< endl;
-    cout<<"     2. Search Category."<< endl;
-    cin>>ch;
-    switch(ch)
-    {
-        case 1:
-            searchAllFile(files, fileNames, name, dependencyGraph);
-            break;
-        case 2:
-            int ch2;
-            cout<<"Enter category you wish to search: ";
-            cout<<"     1. Documents."<< endl;
-            cout<<"     2. Desktop."<< endl;
-            cout<<"     3. Media."<< endl;
-            cout<<"     4. Programming."<< endl;
-            cin>>ch2;
-            switch(ch)
-            {
-                case 1:
-                    break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                case 4:
-                    break;
+            if (!fileFound) {
+                cout << "Batch Process: File \"" << fileName << "\" not found.\n";
             }
-            break;           
-    }
+        } else if (operationType == "MOVE") {
+            getline(ss, fileName, ',');
+            getline(ss, category, ',');
 
-}
-void displayFiles(const DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
-    cout << "==========================================" << endl;
-    cout << "             File Details                 " << endl;
-    cout << "==========================================" << endl;
-
-    for (int i = 0; i < files.getSize(); i++) {
-        const File& file = files[i];
-        cout << "File Name: " << file.fileName 
-             << ", Extension: " << file.extension 
-             << ", Size: " << file.sizeKB << " KB" 
-             << ", Category: " << file.category 
-             << ", Creation Date: " << file.creationDate 
-             << ", Last Modified Date: " << file.lastModifiedDate;
-    }
-
-    cout << ", Dependencies: "; displayDependencies(files, dependencyGraph, fileNames);
-    cout<<endl; 
-
-    cout << "==========================================" << endl;
-}
-
-
-void sortFiles(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames)
-{
-    int sortChoice;
-    cout << "==========================================" << endl;
-    cout << "            Sorting Options               " << endl;
-    cout << "==========================================" << endl;
-    cout << "1. Sort by Name (Merge Sort)" << endl;
-    cout << "2. Sort by Size (Bubble Sort)" << endl;
-    cout << "3. Sort by Creation Date (Insertion Sort)" << endl;
-    cout << "4. Sort by Last Modified Date (Quick Sort)" << endl;
-    cout << "==========================================" << endl;
-    cout << "Enter your choice: ";
-    cin >> sortChoice;
-    switch (sortChoice) 
-    {
-        case 1:
-            mergeSort(files, 0, files.getSize() - 1); 
-            cout << "Files sorted by Name.\n";
-            displayFiles(files, dependencyGraph, fileNames); 
-            break;
-        case 2:
-            bubbleSort(files); 
-            cout << "Files sorted by Size.\n";
-            displayFiles(files, dependencyGraph, fileNames); 
-            break;
-        case 3:
-            insertionSort(files); 
-            cout << "Files sorted by Creation Date.\n";
-            displayFiles(files, dependencyGraph, fileNames); 
-            break;
-        case 4:
-            quickSort(files, 0, files.getSize() - 1); 
-            cout << "Files sorted by Last Modified Date.\n";
-            displayFiles(files, dependencyGraph, fileNames); 
-            break;
-        default:
-            cout << "Invalid choice. Returning to main menu.\n";
-    }
-}
-
-// sort files by namwe
-void merge(DynamicArray& files, int left, int mid, int right) 
-{
-    int tempSize = right - left + 1;
-    File* temp = new File[tempSize]; 
-    int i = left, j = mid + 1, k = 0;
-
-    while (i <= mid && j <= right) {
-        if (files[i].fileName <= files[j].fileName) {
-            temp[k++] = files[i++];
+            bool fileFound = false;
+            for (int i = 0; i < files.getSize(); i++) {
+                if (files[i].fileName == fileName && !files[i].isDeleted) {
+                    files[i].category = category;
+                    fileFound = true;
+                    cout << "Batch Process: Moved file \"" << fileName << "\" to category \"" << category << "\".\n";
+                    break;
+                }
+            }
+            if (!fileFound) {
+                cout << "Batch Process: File \"" << fileName << "\" not found.\n";
+            }
         } else {
-            temp[k++] = files[j++];
+            cout << "Unknown operation type in batch queue.\n";
         }
     }
 
-    while (i <= mid) temp[k++] = files[i++];
-    while (j <= right) temp[k++] = files[j++];
+    cout << "Batch processing completed.\n";
+}
+void merge(DynamicArray& files, int left, int mid, int right) {
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
 
-    for (int l = 0; l < tempSize; l++) {
-        files[left + l] = temp[l];
+    vector<File> leftArray(n1);
+    vector<File> rightArray(n2);
+
+    for (int i = 0; i < n1; i++)
+        leftArray[i] = files[left + i];
+    for (int i = 0; i < n2; i++)
+        rightArray[i] = files[mid + 1 + i];
+
+    int i = 0, j = 0, k = left;
+    while (i < n1 && j < n2) {
+        if (leftArray[i].sizeKB <= rightArray[j].sizeKB) {
+            files[k++] = leftArray[i++];
+        } else {
+            files[k++] = rightArray[j++];
+        }
     }
 
-    delete[] temp;  
+    while (i < n1) files[k++] = leftArray[i++];
+    while (j < n2) files[k++] = rightArray[j++];
 }
 
-void mergeSort(DynamicArray& files, int left, int right) 
-{
+void mergeSort(DynamicArray& files, int left, int right) {
     if (left < right) {
         int mid = left + (right - left) / 2;
         mergeSort(files, left, mid);
@@ -771,46 +608,35 @@ void mergeSort(DynamicArray& files, int left, int right)
         merge(files, left, mid, right);
     }
 }
-
-
-// sorting based on size
-void bubbleSort(DynamicArray& files) 
-{
+void bubbleSort(DynamicArray& files) {
     int n = files.getSize();
     for (int i = 0; i < n - 1; i++) {
         for (int j = 0; j < n - i - 1; j++) {
-            if (files[j].sizeKB < files[j + 1].sizeKB) 
-            {
+            if (files[j].creationDate > files[j + 1].creationDate) {
                 swap(files[j], files[j + 1]);
             }
         }
     }
 }
-
-// sorting based on creation date
 void insertionSort(DynamicArray& files) {
-    for (int i = 1; i < files.getSize(); i++) {
+    int n = files.getSize();
+    for (int i = 1; i < n; i++) {
         File key = files[i];
         int j = i - 1;
 
-        while (j >= 0 && files[j].creationDate > key.creationDate) 
-        {
+        while (j >= 0 && files[j].fileName > key.fileName) {
             files[j + 1] = files[j];
             j--;
         }
         files[j + 1] = key;
     }
 }
-
-// sorting based on date modified meow
-int partition(DynamicArray& files, int low, int high) 
-{
+int partition(DynamicArray& files, int low, int high) {
     string pivot = files[high].lastModifiedDate;
     int i = low - 1;
 
     for (int j = low; j < high; j++) {
-        if (files[j].lastModifiedDate < pivot) 
-        {
+        if (files[j].lastModifiedDate <= pivot) {
             i++;
             swap(files[i], files[j]);
         }
@@ -819,328 +645,157 @@ int partition(DynamicArray& files, int low, int high)
     return i + 1;
 }
 
-void quickSort(DynamicArray& files, int low, int high) 
-{
-    if (low < high) 
-    {
+void quickSort(DynamicArray& files, int low, int high) {
+    if (low < high) {
         int pi = partition(files, low, high);
         quickSort(files, low, pi - 1);
         quickSort(files, pi + 1, high);
     }
 }
+void sortFiles(DynamicArray& files, int option) {
+    cout << "Sorting files...\n";
 
-void addFile(DynamicArray& files, vector<vector<int> >& dependencyGraph, vector<string>& fileNames) {
-    // Create a new File object
-    File newFile;
-
-    // Take user input for file details
-    cout << "Enter the file name: ";
-    cin >> newFile.fileName;
-
-    cout << "Enter the file extension: ";
-    cin >> newFile.extension;
-
-    cout << "Enter the file size in KB: ";
-    cin >> newFile.sizeKB;
-
-    cout << "Enter the file category: ";
-    cin >> newFile.category;
-
-    cout << "Enter the file creation date (YYYY-MM-DD): ";
-    cin >> newFile.creationDate;
-
-    cout << "Enter the file last modified date (YYYY-MM-DD): ";
-    cin >> newFile.lastModifiedDate;
-
-    // Optionally, you can allow the user to enter file dependencies (separated by semicolons)
-    cout << "Enter file dependencies (separated by semicolons, leave empty if none): ";
-    string dependenciesStr;
-    cin.ignore();  // To ignore the newline left in the buffer by previous input
-    getline(cin, dependenciesStr);
-
-    // Parse the dependencies string
-    stringstream depStream(dependenciesStr);
-    string dep;
-    while (getline(depStream, dep, ';')) {
-        addDependency(newFile.dependenciesHead, dep);
-        int depIndex = find(fileNames.begin(), fileNames.end(), dep) - fileNames.begin(); 
-        if (depIndex == fileNames.size()) { 
-            fileNames.push_back(dep); 
-            dependencyGraph.push_back(vector<int>()); 
-        } 
-        dependencyGraph[depIndex].push_back(files.getSize()); 
-    }
-
-    // Add the new file to the DynamicArray
-    files.addFile(newFile);
-    fileNames.push_back(newFile.fileName); 
-    dependencyGraph.push_back(vector<int>()); 
-    cout << "File successfully added!" << endl;
-
-    string operation = "ADD," + newFile.fileName;
-    undoStack.push(operation);
-}
-
-
-
-void moveFile(DynamicArray& files) {
-    string name;
-    cout << "Enter the name of the file to move: ";
-    cin >> name;
-
-    // Search for the file in the dynamic array
-    File* fileToMove = nullptr;
-    for (int i = 0; i < files.getSize(); i++) {
-        size_t extPos = files[i].fileName.find_last_of('.');
-        string baseFileName = (extPos == string::npos) ? files[i].fileName : files[i].fileName.substr(0, extPos);
-
-        if (baseFileName == name) {
-            fileToMove = &files[i];
+    switch (option) {
+        case 1: // Sort by Name
+            insertionSort(files);
+            cout << "Files sorted by name.\n";
             break;
-        }
+        case 2: // Sort by Size
+            mergeSort(files, 0, files.getSize() - 1);
+            cout << "Files sorted by size.\n";
+            break;
+        case 3: // Sort by Creation Date
+            bubbleSort(files);
+            cout << "Files sorted by creation date.\n";
+            break;
+        case 4: // Sort by Last Modified Date
+            quickSort(files, 0, files.getSize() - 1);
+            cout << "Files sorted by last modified date.\n";
+            break;
+        default:
+            cout << "Invalid sorting option. Please choose a valid option.\n";
+            return;
     }
 
-    // If file not found, inform the user
-    if (fileToMove == nullptr) {
-        cout << "File \"" << name << "\" not found." << endl;
-        return;
-    }
-
-    // Display the current category of the file
-    cout << "The file \"" << fileToMove->fileName << "\" is currently in the category: " << fileToMove->category << endl;
-
-    // Ask the user for the new category
-    string newCategory;
-    cout << "Enter the new category to move the file \"" << fileToMove->fileName << "\": ";
-    cin.ignore(); // Ignore leftover newline character
-    getline(cin, newCategory);
-
-    // Remove the file from its current category's AVL tree
-    categoryTreeMap[fileToMove->category].removeFile(fileToMove);
-
-    string operation = "MOVE," + name + fileToMove->extension+"," + fileToMove->category + "," + newCategory;
-
-    // Change the file's category
-    fileToMove->category = newCategory;
-
-    // Add the file to the new category's AVL tree
-    categoryTreeMap[newCategory].insertFile(fileToMove);
-    
-    // pushinh operation to stack
-    undoStack.push(operation);
-
-
-    // Inform the user of the successful move
-    cout << "File \"" << fileToMove->fileName << "\" moved to category: " << newCategory << endl;
+    // Display sorted files
+    displayFiles(files);
 }
+void displayCategories(HashMap& categoryMap) {
+    cout << "\nDisplaying All Categories:\n";
+    cout << "========================================\n";
 
-void saveDependencies(ofstream& outFile, DependencyNode* head) {
-    while (head != nullptr) {
-        outFile << head->dependencyName;
-        if (head->next != nullptr) {
-            outFile << ";";
-        }
-        head = head->next;
-    }
+    categoryMap.displayAllCategories();
+
+    cout << "========================================\n";
 }
+void showMenu(DynamicArray& files, DependenciesGraph& graph, HashMap& categoryMap) {
+    int choice;
 
-void saveToFile(const DynamicArray& files, const string& filepath) 
-{
-    ofstream outFile(filepath);  // Open the file in overwrite mode
+    do {
+        cout << "\n========================================\n";
+        cout << "            File Management Menu         \n";
+        cout << "========================================\n";
+        cout << "1. Display All Files\n";
+        cout << "2. Add a New File\n";
+        cout << "3. Delete a File\n";
+        cout << "4. Move a File to Another Category\n";
+        cout << "5. Display File Dependencies\n";
+        cout << "6. Display All Categories\n";
+        cout << "7. Sort Files\n";
+        cout << "8. Undo Last Operation\n";
+        cout << "9. Batch Process Operations\n";
+        cout << "10. Save Files to Disk\n";
+        cout << "11. Exit\n";
+        cout << "========================================\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
 
-    if (!outFile.is_open()) {
-        cerr << "Error: Unable to open file " << filepath << endl;
-        return;
-    }
+        switch (choice) {
+            case 1: // Display all files
+                displayFiles(files);
+                break;
 
-    // Write the header to the file
-    outFile << "FileName,Extension,SizeKB,Category,CreationDate,LastModifiedDate,Dependencies" << endl;
+            case 2: // Add a new file
+                addFile(files, categoryMap);
+                break;
 
-    // Write each file's data to the file
-    for (int i = 0; i < files.getSize(); i++) {
-        const File& file = files[i];
-
-        outFile << file.fileName << ","
-                << file.extension << ","
-                << file.sizeKB << ","
-                << file.category << ","
-                << file.creationDate << ","
-                << file.lastModifiedDate;
-        saveDependencies(outFile, file.dependenciesHead);        
-
-        outFile << endl;  // End of the line for each file
-    }
-
-    outFile.close();  // Close the file
-    cout << "File data successfully saved to " << filepath << endl;
-}
-
-// Function to display all categories and their files
-void displayAllCategories() {
-    for (auto& pair : categoryTreeMap) {
-        cout << "\nCategory: " << pair.first << endl;
-        pair.second.displayFiles();
-    }
-}
-
-// Undo the last operation
-void undo(DynamicArray& files) 
-{
-    if (!undoStack.isEmpty()) 
-    {
-        string lastOperation = undoStack.top();
-        undoStack.pop();
-
-        stringstream ss(lastOperation);
-        string operationT;
-        getline(ss, operationT, ',');
-        if (operationT == "MOVE") 
-        {
-            stringstream ss(lastOperation);
-            string operationType, fileName, oldCategory, newCategory;
-            getline(ss, operationType, ',');
-            getline(ss, fileName, ',');
-            getline(ss, oldCategory, ',');
-            getline(ss, newCategory, ',');
-            // Move the file back to its old category
-            for (int i = 0; i < files.getSize(); i++) 
+            case 3: // Delete a file
             {
-                if (files[i].fileName == fileName) 
-                {
-                    // Remove from new category
-                    categoryTreeMap[newCategory].removeFile(&files[i]);
-
-                    // Update file's category
-                    files[i].category = oldCategory;
-
-                    // Add back to old category
-                    categoryTreeMap[oldCategory].insertFile(&files[i]);
-
-                    cout << "Undo MOVE: File \"" << fileName << "\" moved back to category \"" << oldCategory << "\"" << endl;
-                    return;
-                }
-            }
-            cout << "Error: File \"" << fileName << "\" not found in the system." << endl;
-        } 
-        else if (operationT == "DELETE") 
-        {
-           {
-            stringstream ss(lastOperation);
-            string operationType, fileName, extension, category, fileSizeStr, creationDate, lastModifiedDate, dependenciesStr;
-
-            getline(ss, operationType, ',');
-            getline(ss, fileName, ',');
-            getline(ss, extension, ',');
-            getline(ss, category, ',');
-            getline(ss, fileSizeStr, ',');
-            getline(ss, creationDate, ',');
-            getline(ss, lastModifiedDate, ',');
-            getline(ss, dependenciesStr);
-            // Recreate the deleted file object
-            File restoredFile;
-            restoredFile.fileName = fileName;
-            restoredFile.extension = extension;
-            restoredFile.category = category;
-            restoredFile.sizeKB = stoi(fileSizeStr); // Convert size back to integer
-            restoredFile.creationDate = creationDate;
-            restoredFile.lastModifiedDate = lastModifiedDate;
-
-            // Reconstruct the dependency list
-            if (!dependenciesStr.empty()) 
-            {
-                stringstream depStream(dependenciesStr);
-                string dependency;
-                while (getline(depStream, dependency, '|')) 
-                {
-                    DependencyNode* newDependency = new DependencyNode(dependency);
-                    if (restoredFile.dependenciesHead == nullptr) 
-                    {
-                        restoredFile.dependenciesHead = newDependency;
-                    } 
-                    else 
-                    {
-                        DependencyNode* temp = restoredFile.dependenciesHead;
-                        while (temp->next != nullptr) 
-                        {
-                            temp = temp->next;
-                        }
-                        temp->next = newDependency;
-                    }
-                }
+                string fileName;
+                cout << "Enter the name of the file to delete: ";
+                cin >> fileName;
+                deleteFile(files, fileName, graph);
+                break;
             }
 
-            // Add the file back to the dynamic array
-            files.addFile(restoredFile);
+            case 4: // Move a file to another category
+                moveFile(files, categoryMap);
+                break;
 
-            // Add the file back to its category in the AVL tree
-            categoryTreeMap[category].insertFile(&files[files.getSize() - 1]);
+            case 5: // Display file dependencies
+                displayDependencies(graph);
+                break;
 
-            cout << "Undo DELETE: File \"" << fileName << "\" restored to category \"" << category << "\"" << endl;
-        } 
-        } 
-        else if (operationT == "ADD") 
-        {
-            stringstream ss(lastOperation);
-            string operationType, fileName;
-            getline(ss, operationType, ',');
-            getline(ss, fileName, ',');
-            // Remove the added file
-            for (int i = 0; i < files.getSize(); i++) 
+            case 6: // Display all categories
+                displayCategories(categoryMap);
+                break;
+
+            case 7: // Sort files
             {
-                if (files[i].fileName == fileName) 
-                {
-                    // Remove from category
-                    categoryTreeMap[files[i].category].removeFile(&files[i]);
-
-                    // Remove from the dynamic array
-                    files.removeFile(i);
-
-                    cout << "Undo ADD: File \"" << fileName << "\" removed from the system." << endl;
-                    return;
-                }
+                int sortOption;
+                cout << "Choose sorting option:\n";
+                cout << "1. Sort by Name\n";
+                cout << "2. Sort by Size\n";
+                cout << "3. Sort by Creation Date\n";
+                cout << "4. Sort by Last Modified Date\n";
+                cout << "Enter your choice: ";
+                cin >> sortOption;
+                sortFiles(files, sortOption);
+                break;
             }
-            cout << "Error: File \"" << fileName << "\" not found in the system." << endl;
-        } 
-        else 
-        {
-            cout << "Unknown operation type in undo stack: " << operationT << endl;
+
+            case 8: // Undo last operation
+                undo(files, undoStack);
+                break;
+
+            case 9: // Batch process operations
+                batchProcess(batchQueue, files, categoryMap);
+                break;
+
+            case 10: // Save files to disk
+                saveToFile(files, "MockDataSet.txt");
+                break;
+
+            case 11: // Exit
+                cout << "Exiting program. Goodbye!\n";
+                break;
+
+            default:
+                cout << "Invalid choice. Please try again.\n";
         }
-    } 
-    else 
-    {
-        cout << "No operations to undo." << endl;
-    }
+    } while (choice != 11);
 }
-
-
-// Function to handle batch processing of file-related operations
-void batchProcess() {
-    while (!batchQueue.isEmpty()) {
-        string operation = batchQueue.front();
-        batchQueue.dequeue();
-        // Execute the batch operation here (e.g., move files).
-        cout << "Processing: " << operation << endl;
-    }
-}
-
-// Function to add a file to the batch queue for processing
-void addToBatchQueue(const string& operation) {
-    batchQueue.enqueue(operation);
-}
-
-int main()
-{
+int main() {
     string filePath = "MockDataSet.txt";
+
+    // Initialize core components
     DynamicArray files;
-    vector<vector<int> > dependencyGraph;
-    vector<string> fileNames;
-    readFromFile(files, filePath, dependencyGraph, fileNames);
+    DependenciesGraph graph;
+    HashMap categoryMap;
+
+    // Read files and populate data structures
+    readFromFile(filePath, files, graph, categoryMap);
+
+    // Display the number of files loaded
     cout << "Number of files read: " << files.getSize() << endl;
 
+    // Launch the menu for user interaction
+    showMenu(files, graph, categoryMap);
 
-    showMenu(files, dependencyGraph, fileNames);
-
+    // Save files to disk upon exiting the menu
     saveToFile(files, filePath);
 
+    cout << "Program exited successfully.\n";
+
+    return 0;
 }
-//end of code
