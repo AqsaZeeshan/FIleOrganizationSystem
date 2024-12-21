@@ -4,7 +4,6 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-#include <stdexcept>
 using namespace std;
 
 // DependencyNode for linked list representation
@@ -61,6 +60,27 @@ public:
         fileNode->dependenciesHead = newDep;
     }
 
+    void removeDependency(const string& fileName) {
+    FileNode* current = head;
+    while (current) {
+        DependencyNode* prev = nullptr;
+        DependencyNode* depCurrent = current->dependenciesHead;
+
+        while (depCurrent) {
+            if (depCurrent->dependencyName == fileName) {
+                if (prev) prev->next = depCurrent->next;
+                else current->dependenciesHead = depCurrent->next;
+
+                delete depCurrent;
+                break;
+            }
+            prev = depCurrent;
+            depCurrent = depCurrent->next;
+        }
+        current = current->next;
+    }
+}
+
     void markDependencyAsDeleted(const string& dependencyName) {
         FileNode* current = head;
         while (current) {
@@ -75,21 +95,21 @@ public:
         }
     }
 
-    void displayDependencies() {
-        FileNode* current = head;
-        while (current) {
-            cout << "File: " << current->fileName << " depends on: ";
-            DependencyNode* depCurrent = current->dependenciesHead;
-            while (depCurrent) {
-                cout << depCurrent->dependencyName;
-                if (depCurrent->next)
-                    cout << ", ";
-                depCurrent = depCurrent->next;
-            }
-            cout << endl;
-            current = current->next;
+    void displayDependencies() const {
+    FileNode* current = head;
+    while (current) {
+        cout << "File: " << current->fileName << " depends on: ";
+        DependencyNode* depCurrent = current->dependenciesHead;
+        while (depCurrent) {
+            cout << depCurrent->dependencyName;
+            if (depCurrent->next)
+                cout << ", ";
+            depCurrent = depCurrent->next;
         }
+        cout << endl;
+        current = current->next;
     }
+}
 
     ~DependenciesGraph() {
         FileNode* current = head;
@@ -121,46 +141,85 @@ struct File {
 };
 
 // DynamicArray class to manage files
-class DynamicArray {
-private:
-    File* files;
-    int capacity;
-    int size;
+class DynamicArray
+{
+    private:
+        File* files;
+        int capacity;
+        int size;
 
-    void resize() {
-        capacity *= 2;
-        File* newFiles = new File[capacity];
-        for (int i = 0; i < size; i++) {
-            newFiles[i] = files[i];
+        void resize()
+        {
+            capacity = capacity * 2;
+            File* newFiles = new File[capacity];
+            for(int i = 0; i < size; i++)
+            {
+                newFiles[i] = files[i];
+            }
+            delete[] files;
+            files = newFiles;
         }
-        delete[] files;
-        files = newFiles;
-    }
+    public:
+        DynamicArray(int initialCapacity = 10)
+        {
+            capacity = initialCapacity;
+            size = 0;
+            files = new File[capacity];
+        }
 
-public:
-    DynamicArray(int initialCapacity = 10) : capacity(initialCapacity), size(0) {
-        files = new File[capacity];
-    }
+        void addFile(const File& file)
+        {
+            if(size == capacity)
+            {
+                resize();
+            }
+            files[size++] = file;
+        }
 
-    void addFile(const File& file) {
-        if (size == capacity)
-            resize();
-        files[size++] = file;
-    }
+        int getSize() const
+        {
+            return size;
+        }
 
-    int getSize() const {
-        return size;
-    }
+        void removeFile(int index) {
+            if (index < 0 || index >= size) throw out_of_range("Index out of range");
 
-    File& operator[](int index) {
-        if (index < 0 || index >= size)
-            throw out_of_range("Index out of range");
-        return files[index];
-    }
+            // Dependency cleanup is no longer relevant for File struct
+            // Shift files to close the gap
+        for (int i = index; i < size - 1; i++) {
+            files[i] = files[i + 1];
+        }
+        size--;
+}
 
-    ~DynamicArray() {
-        delete[] files;
-    }
+        File& operator[](int index)
+        {
+            if(index < 0 || index >= size)
+            {
+                throw out_of_range("Index out of range");
+            }
+            return files[index];
+        }
+
+        const File& operator[](int index) const 
+        {
+            return files[index];  // Allows access but not modification
+        }
+
+        void decrementSize() 
+        {
+            if (size > 0) 
+            {
+             size--;
+            }
+        }
+
+        ~DynamicArray() 
+        {
+            delete[] files;
+        }
+
+
 };
 
 // AVL Tree Node for managing categories
@@ -178,36 +237,43 @@ class AVLTree {
 private:
     AVLNode* root;
 
-    int getHeight(AVLNode* node) {
+    int getHeight(AVLNode* node) const {
         return node ? node->height : 0;
     }
 
-    int getBalanceFactor(AVLNode* node) {
+    int getBalanceFactor(AVLNode* node) const {
         return node ? getHeight(node->left) - getHeight(node->right) : 0;
     }
 
     AVLNode* rotateRight(AVLNode* y) {
         AVLNode* x = y->left;
         AVLNode* T = x->right;
+
         x->right = y;
         y->left = T;
+
         y->height = max(getHeight(y->left), getHeight(y->right)) + 1;
         x->height = max(getHeight(x->left), getHeight(x->right)) + 1;
+
         return x;
     }
 
     AVLNode* rotateLeft(AVLNode* x) {
         AVLNode* y = x->right;
         AVLNode* T = y->left;
+
         y->left = x;
         x->right = T;
+
         x->height = max(getHeight(x->left), getHeight(x->right)) + 1;
         y->height = max(getHeight(y->left), getHeight(y->right)) + 1;
+
         return y;
     }
 
     AVLNode* insert(AVLNode* node, const string& category) {
         if (!node) return new AVLNode(category);
+
         if (category < node->category)
             node->left = insert(node->left, category);
         else if (category > node->category)
@@ -216,16 +282,20 @@ private:
             return node;
 
         node->height = max(getHeight(node->left), getHeight(node->right)) + 1;
+
         int balance = getBalanceFactor(node);
 
         if (balance > 1 && category < node->left->category)
             return rotateRight(node);
+
         if (balance < -1 && category > node->right->category)
             return rotateLeft(node);
+
         if (balance > 1 && category > node->left->category) {
             node->left = rotateLeft(node->left);
             return rotateRight(node);
         }
+
         if (balance < -1 && category < node->right->category) {
             node->right = rotateRight(node->right);
             return rotateLeft(node);
@@ -234,7 +304,63 @@ private:
         return node;
     }
 
-    void inorder(AVLNode* node) {
+    AVLNode* minValueNode(AVLNode* node) {
+        AVLNode* current = node;
+        while (current && current->left != nullptr)
+            current = current->left;
+        return current;
+    }
+
+    AVLNode* remove(AVLNode* root, const string& category) {
+        if (!root) return root;
+
+        if (category < root->category)
+            root->left = remove(root->left, category);
+        else if (category > root->category)
+            root->right = remove(root->right, category);
+        else {
+            if (!root->left || !root->right) {
+                AVLNode* temp = root->left ? root->left : root->right;
+                if (!temp) {
+                    temp = root;
+                    root = nullptr;
+                } else {
+                    *root = *temp;
+                }
+                delete temp;
+            } else {
+                AVLNode* temp = minValueNode(root->right);
+                root->category = temp->category;
+                root->right = remove(root->right, temp->category);
+            }
+        }
+
+        if (!root) return root;
+
+        root->height = max(getHeight(root->left), getHeight(root->right)) + 1;
+
+        int balance = getBalanceFactor(root);
+
+        if (balance > 1 && getBalanceFactor(root->left) >= 0)
+            return rotateRight(root);
+
+        if (balance > 1 && getBalanceFactor(root->left) < 0) {
+            root->left = rotateLeft(root->left);
+            return rotateRight(root);
+        }
+
+        if (balance < -1 && getBalanceFactor(root->right) <= 0)
+            return rotateLeft(root);
+
+        if (balance < -1 && getBalanceFactor(root->right) > 0) {
+            root->right = rotateRight(root->right);
+            return rotateLeft(root);
+        }
+
+        return root;
+    }
+
+    void inorder(AVLNode* node) const {
         if (node) {
             inorder(node->left);
             cout << "Category: " << node->category << endl;
@@ -249,23 +375,117 @@ public:
         root = insert(root, category);
     }
 
-    void display() {
+    void remove(const string& category) {
+    root = remove(root, category);
+    }
+
+    void display () const {
         inorder(root);
     }
 };
 
+class HashMapReplacement {
+private:
+    vector<pair<string, AVLTree>> categoryMap;
+
+    AVLTree* findCategory(const string& categoryName) {
+        for (auto& pair : categoryMap) {
+            if (pair.first == categoryName) {
+                return &pair.second;
+            }
+        }
+        return nullptr;
+    }
+
+public:
+    void addCategory(const string& categoryName) {
+        if (!findCategory(categoryName)) {
+            categoryMap.push_back({categoryName, AVLTree()});
+        }
+    }
+
+    AVLTree& getTree(const string& categoryName) {
+    AVLTree* tree = findCategory(categoryName);
+    if (!tree) {
+        throw runtime_error("Category not found");
+    }
+    return *tree;
+    }
+
+    void displayAllCategories() {
+    for (const auto& pair : categoryMap) {
+        cout << "Category: " << pair.first << endl;
+        pair.second.display();
+        }
+    }
+};
+
+class CustomStack {
+private:
+    vector<string> stack;
+public:
+    void push(const string& operation) {
+        stack.push_back(operation);
+    }
+
+    void pop() {
+        if (!stack.empty()) stack.pop_back();
+    }
+
+    string top() const {
+        if (!stack.empty()) return stack.back();
+        throw runtime_error("Stack is empty");
+    }
+
+    bool empty() const {
+        return stack.empty();
+    }
+};
+
+
+
+class CustomQueue {
+private:
+    vector<string> queue;
+
+public:
+    void enqueue(const string& value) {
+        queue.push_back(value);
+    }
+
+    string front() const {
+        if (queue.empty()) {
+            throw runtime_error("Queue is empty");
+        }
+        return queue.front();
+    }
+
+    void dequeue() {
+        if (queue.empty()) {
+            throw runtime_error("Queue is empty");
+        }
+        queue.erase(queue.begin());
+    }
+
+    bool empty() const {
+        return queue.empty();
+    }
+};
+
+
+
 void readFromFile(const string& filepath, DynamicArray& files, DependenciesGraph& graph);
-void showMenu(DynamicArray& files, DependenciesGraph& graph, AVLTree& categoryTree);
+void showMenu(DynamicArray& files, DependenciesGraph& graph, HashMapReplacement& categoryMap, CustomStack& undoStack, CustomQueue& batchQueue);
 void saveToFile(const DynamicArray& files, const string& filepath);
-void addFile(DynamicArray& files, AVLTree& categoryTree);
+void addFile(DynamicArray& files, HashMapReplacement& categoryMap);
 void deleteFile(DynamicArray& files, const string& fileName, DependenciesGraph& graph);
-void moveFile(DynamicArray& files, AVLTree& categoryTree);
+void moveFile(DynamicArray& files, HashMapReplacement& categoryMap);
 void displayFiles(const DynamicArray& files);
 void displayDependencies(const DependenciesGraph& graph);
-void displayCategories(const AVLTree& categoryTree);
+void displayCategories(HashMapReplacement& categoryMap);
 void sortFiles(DynamicArray& files, int option);
-void undo(DynamicArray& files, stack<string>& undoStack);
-void batchProcess(queue<string>& batchQueue, DynamicArray& files, AVLTree& categoryTree);
+void undo(DynamicArray& files, CustomStack& undoStack);
+void batchProcess(CustomQueue& batchQueue, DynamicArray& files, HashMapReplacement& categoryMap, DependenciesGraph& graph);
 void merge(DynamicArray& files, int left, int mid, int right);
 void mergeSort(DynamicArray& files, int left, int right); // Sort by size
 void bubbleSort(DynamicArray& files); // Sort by creation date
@@ -308,7 +528,7 @@ void readFromFile(const string& filepath, DynamicArray& files, DependenciesGraph
     file.close();
     cout << "File data successfully read into the system.\n";
 }
-void addFile(DynamicArray& files, HashMap& categoryMap) {
+void addFile(DynamicArray& files, HashMapReplacement& categoryMap) {
     // Create a new file
     File newFile;
 
@@ -331,7 +551,7 @@ void addFile(DynamicArray& files, HashMap& categoryMap) {
     files.addFile(newFile);
 
     // Add the category to the category map's AVL tree
-    categoryMap.getTree(newFile.category).insert(newFile.category);
+    categoryMap.getTree(newFile.category).insert(newFile.fileName);
 
     // Confirm the addition
     cout << "File \"" << newFile.fileName << "\" added successfully to the system.\n";
@@ -363,27 +583,21 @@ void displayFiles(const DynamicArray& files) {
 // Function to delete a file and mark dependencies as deleted
 void deleteFile(DynamicArray& files, const string& fileName, DependenciesGraph& graph) {
     bool fileFound = false;
-
-    // Search for the file by name in the dynamic array
-    for (int i = 0; i < files.getSize(); i++) {
-        File& file = files[i];
-
-        // Check if the file matches the given name
-        if (file.fileName == fileName && !file.isDeleted) {
-            file.isDeleted = true; // Mark the file as deleted
+    for (int i = 0; i < files.getSize(); ++i) {
+        if (files[i].fileName == fileName && !files[i].isDeleted) {
+            files[i].isDeleted = true;
             fileFound = true;
 
-            // Mark this file as deleted in the dependency graph
-            graph.markDependencyAsDeleted(fileName);
+            // Update dependencies
+            graph.removeDependency(fileName);
 
-            cout << "File \"" << fileName << "\" has been deleted successfully.\n";
+            cout << "File " << fileName << " marked as deleted.\n";
             break;
         }
     }
 
-    // If the file was not found, print a message
     if (!fileFound) {
-        cout << "File \"" << fileName << "\" not found or already deleted.\n";
+        cout << "File " << fileName << " not found or already deleted.\n";
     }
 }
 
@@ -424,157 +638,83 @@ void saveToFile(const DynamicArray& files, const string& filepath) {
     outFile.close(); // Close the file after writing
     cout << "File data successfully saved to \"" << filepath << "\".\n";
 }
-void moveFile(DynamicArray& files, HashMap& categoryMap) {
-    string fileName, newCategory;
-    bool fileFound = false;
 
-    // Prompt user for file name
-    cout << "Enter the name of the file to move: ";
+void moveFile(DynamicArray& files, HashMapReplacement& categoryMap) {
+    string fileName, newCategory, oldCategory;
+    cout << "Enter file name to move: ";
     cin >> fileName;
+    cout << "Enter new category: ";
+    cin >> newCategory;
 
-    // Search for the file in the dynamic array
+    bool fileFound = false;
     for (int i = 0; i < files.getSize(); i++) {
-        File& file = files[i];
+        if (files[i].fileName == fileName) {
+            oldCategory = files[i].category;
+            files[i].category = newCategory;
 
-        if (file.fileName == fileName && !file.isDeleted) {
+            // Update category map
+            categoryMap.getTree(oldCategory).remove(fileName); // Ensure remove() exists
+            categoryMap.getTree(newCategory).insert(fileName);
+
             fileFound = true;
-
-            // Display current category
-            cout << "The file \"" << file.fileName << "\" is currently in the category: " << file.category << "\n";
-
-            // Prompt user for new category
-            cout << "Enter the new category to move the file to: ";
-            cin >> newCategory;
-
-            // Update the category in the file
-            string oldCategory = file.category;
-            file.category = newCategory;
-
-            // Update the AVL trees in the HashMap
-            categoryMap.getTree(oldCategory).insert(fileName); // Remove from old tree
-            categoryMap.getTree(newCategory).insert(fileName); // Add to new tree
-
-            // Confirm the move
-            cout << "File \"" << file.fileName << "\" moved to category \"" << newCategory << "\" successfully.\n";
-
-            // Optionally push to undo stack
-            // undoStack.push("MOVE," + fileName + "," + oldCategory + "," + newCategory);
             break;
         }
     }
 
-    // If the file is not found
     if (!fileFound) {
-        cout << "File \"" << fileName << "\" not found or already deleted.\n";
+        cout << "File not found!\n";
     }
 }
-void undo(DynamicArray& files, stack<string>& undoStack) {
+
+
+void undo(DynamicArray& files, CustomStack& undoStack) {
     if (undoStack.empty()) {
-        cout << "No operations to undo.\n";
+        cout << "Undo stack is empty! No operation to undo.\n";
         return;
     }
 
     string lastOperation = undoStack.top();
     undoStack.pop();
 
-    stringstream ss(lastOperation);
-    string operationType, fileName, oldCategory, newCategory;
-    getline(ss, operationType, ',');
-
-    if (operationType == "ADD") {
-        getline(ss, fileName, ',');
-        for (int i = 0; i < files.getSize(); i++) {
-            if (files[i].fileName == fileName && !files[i].isDeleted) {
-                files[i].isDeleted = true;
-                cout << "Undo ADD: File \"" << fileName << "\" removed.\n";
-                return;
-            }
-        }
-    } else if (operationType == "DELETE") {
-        File restoredFile;
-        getline(ss, restoredFile.fileName, ',');
-        getline(ss, restoredFile.extension, ',');
-        ss >> restoredFile.sizeKB;
-        getline(ss, restoredFile.category, ',');
-        getline(ss, restoredFile.creationDate, ',');
-        getline(ss, restoredFile.lastModifiedDate, ',');
-
-        files.addFile(restoredFile);
-        cout << "Undo DELETE: File \"" << restoredFile.fileName << "\" restored.\n";
-    } else if (operationType == "MOVE") {
-        getline(ss, fileName, ',');
-        getline(ss, oldCategory, ',');
-        getline(ss, newCategory, ',');
-
-        for (int i = 0; i < files.getSize(); i++) {
-            if (files[i].fileName == fileName && !files[i].isDeleted) {
-                files[i].category = oldCategory;
-                cout << "Undo MOVE: File \"" << fileName << "\" moved back to category \"" << oldCategory << "\".\n";
-                return;
-            }
-        }
+    if (lastOperation == "add") {
+        // Implement logic to undo the last added file
+        cout << "Undoing last add operation...\n";
+        // Example: files.removeLast(); (Implement removeLast in DynamicArray if needed)
+    } else if (lastOperation == "delete") {
+        // Implement logic to restore the last deleted file
+        cout << "Undoing last delete operation...\n";
+        // Example: files.restoreLastDeleted(); (Implement restoreLastDeleted in DynamicArray if needed)
     } else {
-        cout << "Unknown operation type in undo stack.\n";
+        cout << "Unknown operation to undo.\n";
     }
 }
-void batchProcess(queue<string>& batchQueue, DynamicArray& files, HashMap& categoryMap) {
+
+void batchProcess(CustomQueue& batchQueue, DynamicArray& files, HashMapReplacement& categoryMap, DependenciesGraph& graph) {
     while (!batchQueue.empty()) {
         string operation = batchQueue.front();
-        batchQueue.pop();
+        batchQueue.dequeue();
 
         stringstream ss(operation);
         string operationType, fileName, category;
         getline(ss, operationType, ',');
 
         if (operationType == "ADD") {
-            File newFile;
-            getline(ss, newFile.fileName, ',');
-            getline(ss, newFile.extension, ',');
-            ss >> newFile.sizeKB;
-            getline(ss, newFile.category, ',');
-            getline(ss, newFile.creationDate, ',');
-            getline(ss, newFile.lastModifiedDate, ',');
-
-            files.addFile(newFile);
-            categoryMap.getTree(newFile.category).insert(newFile.fileName);
-            cout << "Batch Process: Added file \"" << newFile.fileName << "\".\n";
+            // Add file logic
+            addFile(files, categoryMap);
         } else if (operationType == "DELETE") {
-            getline(ss, fileName, ',');
-            bool fileFound = false;
-            for (int i = 0; i < files.getSize(); i++) {
-                if (files[i].fileName == fileName && !files[i].isDeleted) {
-                    files[i].isDeleted = true;
-                    fileFound = true;
-                    cout << "Batch Process: Deleted file \"" << fileName << "\".\n";
-                    break;
-                }
-            }
-            if (!fileFound) {
-                cout << "Batch Process: File \"" << fileName << "\" not found.\n";
-            }
+            cout << "Enter file name to delete: ";
+            cin >> fileName;
+            deleteFile(files, fileName, graph);
         } else if (operationType == "MOVE") {
-            getline(ss, fileName, ',');
-            getline(ss, category, ',');
-
-            bool fileFound = false;
-            for (int i = 0; i < files.getSize(); i++) {
-                if (files[i].fileName == fileName && !files[i].isDeleted) {
-                    files[i].category = category;
-                    fileFound = true;
-                    cout << "Batch Process: Moved file \"" << fileName << "\" to category \"" << category << "\".\n";
-                    break;
-                }
-            }
-            if (!fileFound) {
-                cout << "Batch Process: File \"" << fileName << "\" not found.\n";
-            }
+            moveFile(files, categoryMap);
         } else {
             cout << "Unknown operation type in batch queue.\n";
         }
     }
-
-    cout << "Batch processing completed.\n";
 }
+
+
+
 void merge(DynamicArray& files, int left, int mid, int right) {
     int n1 = mid - left + 1;
     int n2 = right - mid;
@@ -610,14 +750,21 @@ void mergeSort(DynamicArray& files, int left, int right) {
 }
 void bubbleSort(DynamicArray& files) {
     int n = files.getSize();
-    for (int i = 0; i < n - 1; i++) {
-        for (int j = 0; j < n - i - 1; j++) {
-            if (files[j].creationDate > files[j + 1].creationDate) {
-                swap(files[j], files[j + 1]);
+    for (int i = 0; i < n - 1; ++i) {
+        for (int j = 0; j < n - i - 1; ++j) {
+            if (files[j].sizeKB > files[j + 1].sizeKB) {
+                swap(files[j], files[j + 1]); // Use custom swap
             }
         }
     }
 }
+
+void swap(File& a, File& b) {
+    File temp = a;
+    a = b;
+    b = temp;
+}
+
 void insertionSort(DynamicArray& files) {
     int n = files.getSize();
     for (int i = 1; i < n; i++) {
@@ -631,19 +778,20 @@ void insertionSort(DynamicArray& files) {
         files[j + 1] = key;
     }
 }
-int partition(DynamicArray& files, int low, int high) {
-    string pivot = files[high].lastModifiedDate;
-    int i = low - 1;
 
-    for (int j = low; j < high; j++) {
-        if (files[j].lastModifiedDate <= pivot) {
-            i++;
-            swap(files[i], files[j]);
+int partition(DynamicArray& files, int low, int high) {
+    File pivot = files[high];
+    int i = low - 1;
+    for (int j = low; j < high; ++j) {
+        if (files[j].fileName < pivot.fileName) {
+            ++i;
+            swap(files[i], files[j]); // Use custom swap
         }
     }
-    swap(files[i + 1], files[high]);
+    swap(files[i + 1], files[high]); // Use custom swap
     return i + 1;
 }
+
 
 void quickSort(DynamicArray& files, int low, int high) {
     if (low < high) {
@@ -680,7 +828,7 @@ void sortFiles(DynamicArray& files, int option) {
     // Display sorted files
     displayFiles(files);
 }
-void displayCategories(HashMap& categoryMap) {
+void displayCategories(HashMapReplacement& categoryMap) {
     cout << "\nDisplaying All Categories:\n";
     cout << "========================================\n";
 
@@ -688,114 +836,77 @@ void displayCategories(HashMap& categoryMap) {
 
     cout << "========================================\n";
 }
-void showMenu(DynamicArray& files, DependenciesGraph& graph, HashMap& categoryMap) {
-    int choice;
 
+void showMenu(DynamicArray& files, DependenciesGraph& graph, HashMapReplacement& categoryMap, CustomStack& undoStack, CustomQueue& batchQueue) {
+    int choice;
     do {
-        cout << "\n========================================\n";
-        cout << "            File Management Menu         \n";
-        cout << "========================================\n";
-        cout << "1. Display All Files\n";
-        cout << "2. Add a New File\n";
-        cout << "3. Delete a File\n";
-        cout << "4. Move a File to Another Category\n";
-        cout << "5. Display File Dependencies\n";
-        cout << "6. Display All Categories\n";
-        cout << "7. Sort Files\n";
-        cout << "8. Undo Last Operation\n";
-        cout << "9. Batch Process Operations\n";
-        cout << "10. Save Files to Disk\n";
-        cout << "11. Exit\n";
-        cout << "========================================\n";
+        cout << "\nMenu:\n";
+        cout << "1. Add a file\n";
+        cout << "2. Delete a file\n";
+        cout << "3. Display files\n";
+        cout << "4. Sort files\n";
+        cout << "5. Undo last operation\n";
+        cout << "0. Exit\n";
         cout << "Enter your choice: ";
         cin >> choice;
 
         switch (choice) {
-            case 1: // Display all files
-                displayFiles(files);
-                break;
-
-            case 2: // Add a new file
+            case 1: {
                 addFile(files, categoryMap);
-                break;
-
-            case 3: // Delete a file
-            {
-                string fileName;
-                cout << "Enter the name of the file to delete: ";
-                cin >> fileName;
-                deleteFile(files, fileName, graph);
+                undoStack.push("add");
                 break;
             }
-
-            case 4: // Move a file to another category
-                moveFile(files, categoryMap);
+            case 2: {
+                cout << "Enter the name of the file to delete: ";
+                string fileName;
+                cin >> fileName;
+                deleteFile(files, fileName, graph);
+                undoStack.push("delete");
                 break;
-
-            case 5: // Display file dependencies
-                displayDependencies(graph);
+            }
+            case 3: {
+                displayFiles(files);
                 break;
-
-            case 6: // Display all categories
-                displayCategories(categoryMap);
-                break;
-
-            case 7: // Sort files
-            {
+            }
+            case 4: {
                 int sortOption;
-                cout << "Choose sorting option:\n";
-                cout << "1. Sort by Name\n";
-                cout << "2. Sort by Size\n";
-                cout << "3. Sort by Creation Date\n";
-                cout << "4. Sort by Last Modified Date\n";
+                cout << "Sort by:\n1. Name\n2. Size\n3. Creation Date\n4. Last Modified Date\n";
                 cout << "Enter your choice: ";
                 cin >> sortOption;
                 sortFiles(files, sortOption);
                 break;
             }
-
-            case 8: // Undo last operation
+            case 5: {
                 undo(files, undoStack);
                 break;
-
-            case 9: // Batch process operations
-                batchProcess(batchQueue, files, categoryMap);
+            }
+            case 0:
+                cout << "Exiting program...\n";
                 break;
-
-            case 10: // Save files to disk
-                saveToFile(files, "MockDataSet.txt");
-                break;
-
-            case 11: // Exit
-                cout << "Exiting program. Goodbye!\n";
-                break;
-
             default:
                 cout << "Invalid choice. Please try again.\n";
         }
-    } while (choice != 11);
+    } while (choice != 0);
 }
+
 int main() {
     string filePath = "MockDataSet.txt";
 
-    // Initialize core components
+    // Core components
     DynamicArray files;
     DependenciesGraph graph;
-    HashMap categoryMap;
+    HashMapReplacement categoryMap;
+    CustomStack undoStack;
+    CustomQueue batchQueue;
 
-    // Read files and populate data structures
-    readFromFile(filePath, files, graph, categoryMap);
+    // Load data
+    readFromFile(filePath, files, graph);
 
-    // Display the number of files loaded
-    cout << "Number of files read: " << files.getSize() << endl;
+    // Launch menu
+    showMenu(files, graph, categoryMap, undoStack, batchQueue);
 
-    // Launch the menu for user interaction
-    showMenu(files, graph, categoryMap);
-
-    // Save files to disk upon exiting the menu
+    // Save data
     saveToFile(files, filePath);
-
-    cout << "Program exited successfully.\n";
 
     return 0;
 }
